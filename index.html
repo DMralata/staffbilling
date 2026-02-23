@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Billing Performance Dashboard - Code 97155</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap');
+        
+        :root {
+            --primary: #0a4d68;
+            --secondary: #088395;
+            --accent: #05bfdb;
+            --warning: #ff6b6b;
+            --success: #51cf66;
+            --bg-dark: #0d1117;
+            --bg-light: #161b22;
+            --text: #c9d1d9;
+            --text-dim: #8b949e;
+            --border: #30363d;
+            --target: 25;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(8, 131, 149, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            pointer-events: none;
+            animation: grid-drift 60s linear infinite;
+        }
+        
+        @keyframes grid-drift {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(30px, 30px); }
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        header {
+            margin-bottom: 3rem;
+            animation: slide-down 0.6s ease-out;
+        }
+        
+        @keyframes slide-down {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 400;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            font-size: 1.2rem;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .error {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid var(--warning);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            color: var(--warning);
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+            animation: fade-in 0.8s ease-out 0.2s both;
+        }
+        
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .kpi-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 32px rgba(5, 191, 219, 0.2);
+        }
+        
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--secondary));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+        
+        .kpi-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .provider-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .status-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .status-below {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+        
+        .status-meeting {
+            background: rgba(81, 207, 102, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .hours-display {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .hours-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        
+        .hours-label {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            font-weight: 300;
+        }
+        
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--secondary));
+            border-radius: 4px;
+            transition: width 1s ease-out;
+            position: relative;
+        }
+        
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .target-info {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .client-count {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+        
+        .client-count-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+        
+        .client-count-label {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+        
+        .heatmap-section {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            animation: fade-in 0.8s ease-out 0.4s both;
+        }
+        
+        .section-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(180deg, var(--accent), var(--secondary));
+            border-radius: 2px;
+        }
+        
+        .heatmap-container {
+            overflow-x: auto;
+            margin-top: 1.5rem;
+        }
+        
+        .heatmap-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .heatmap-table th {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+        }
+        
+        .heatmap-table td {
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 8px;
+            position: relative;
+            transition: all 0.2s ease;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .heatmap-table td:hover {
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 4px 16px rgba(5, 191, 219, 0.3);
+        }
+        
+        .heatmap-table .provider-cell {
+            text-align: left;
+            font-weight: 600;
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .heat-0 { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .heat-1 { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
+        .heat-2 { background: rgba(251, 191, 36, 0.4); color: #f59e0b; }
+        .heat-3 { background: rgba(251, 191, 36, 0.6); color: #f59e0b; }
+        .heat-4 { background: rgba(34, 197, 94, 0.5); color: #22c55e; }
+        .heat-5 { background: rgba(34, 197, 94, 0.7); color: white; font-weight: 700; }
+        .heat-target { 
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(22, 163, 74, 1)); 
+            color: white;
+            font-weight: 700;
+            border: 2px solid #16a34a;
+        }
+        
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .legend-box {
+            width: 40px;
+            height: 24px;
+            border-radius: 4px;
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+        
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+        
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Staff Billing Dashboard</h1>
+            <div class="subtitle">Procedure Code 97155 · Last 4 Weeks Performance · Live Data</div>
+        </header>
+        
+        <div class="loading" id="loading">Loading data from Google Sheets...</div>
+        <div class="error" id="error" style="display: none;"></div>
+        
+        <div class="kpi-grid" id="kpiGrid" style="display: none;"></div>
+        
+        <div class="heatmap-section" id="heatmapSection" style="display: none;">
+            <div class="section-title">Weekly Hours Heatmap</div>
+            <div class="heatmap-container">
+                <table class="heatmap-table" id="heatmapTable"></table>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-box heat-0"></div>
+                    <span>0-5 hrs (Poor)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box heat-1"></div>
+                    <span>5-10 hrs (Low)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box heat-2"></div>
+                    <span>10-15 hrs (Fair)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box heat-3"></div>
+                    <span>15-20 hrs (Good)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box heat-4"></div>
+                    <span>20-25 hrs (Very Good)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box heat-target"></div>
+                    <span>25+ hrs (Target Met)</span>
+                </div>
+            </div>
+            
+            <div class="summary-stats" id="summaryStats"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Google Sheets Configuration
+        const SHEET_ID = '1IwjOdgUG-gHzaQdfwxyUtIcpkDFyFKBylfHhVJvtTe0';
+        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+        
+        // Fetch data from Google Sheets
+        async function fetchGoogleSheetData() {
+            try {
+                const response = await fetch(SHEET_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const csvText = await response.text();
+                return csvText;
+            } catch (error) {
+                console.error('Error fetching Google Sheet:', error);
+                throw error;
+            }
+        }
+        
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+            
+            return lines.slice(1).map(line => {
+                // Handle CSV with quoted fields
+                const values = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        values.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                values.push(current.trim());
+                
+                return headers.reduce((obj, header, i) => {
+                    obj[header] = values[i] ? values[i].replace(/"/g, '') : '';
+                    return obj;
+                }, {});
+            });
+        }
+
+        function getWeekNumber(date) {
+            const d = new Date(date);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+            const yearStart = new Date(d.getFullYear(), 0, 1);
+            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            return `${d.getFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+        }
+
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff));
+        }
+
+        function processData(data) {
+            const providers = {};
+            
+            data.forEach(row => {
+                // Filter for procedure code 97155
+                if (row.ProcedureCode !== '97155') return;
+                
+                const provider = `${row.ProviderFirstName} ${row.ProviderLastName}`;
+                
+                // Filter out Nicole Dutton and Anna Morgan
+                if (provider === 'Nicole Dutton' || provider === 'Anna Morgan') {
+                    return;
+                }
+                
+                const hours = parseFloat(row.TimeWorkedInHours);
+                if (isNaN(hours)) return;
+                
+                const week = getWeekNumber(row.DateOfService);
+                
+                if (!providers[provider]) {
+                    providers[provider] = {};
+                }
+                
+                if (!providers[provider][week]) {
+                    providers[provider][week] = 0;
+                }
+                
+                providers[provider][week] += hours;
+            });
+            
+            return providers;
+        }
+
+        function getLast4Weeks(weeks) {
+            return weeks.sort().slice(-4);
+        }
+        
+        function getLatestWeek(weeks) {
+            return weeks.sort()[weeks.length - 1];
+        }
+        
+        function calculateUniqueClients(data, provider, latestWeek) {
+            const latestWeekData = data.filter(row => {
+                const rowProvider = `${row.ProviderFirstName} ${row.ProviderLastName}`;
+                const week = getWeekNumber(row.DateOfService);
+                return rowProvider === provider && week === latestWeek && row.ProcedureCode === '97155';
+            });
+            
+            const uniqueClients = new Set(latestWeekData.map(row => row.ClientId).filter(id => id));
+            return uniqueClients.size;
+        }
+
+        function calculateAverage(provider, last4Weeks) {
+            let total = 0;
+            let count = 0;
+            
+            last4Weeks.forEach(week => {
+                if (provider[week]) {
+                    total += provider[week];
+                    count++;
+                }
+            });
+            
+            return count > 0 ? total / count : 0;
+        }
+
+        function getHeatClass(hours) {
+            if (hours === 0) return 'heat-0';
+            if (hours >= 25) return 'heat-target';
+            if (hours >= 20) return 'heat-4';
+            if (hours >= 15) return 'heat-3';
+            if (hours >= 10) return 'heat-2';
+            if (hours >= 5) return 'heat-1';
+            return 'heat-0';
+        }
+
+        async function renderDashboard() {
+            try {
+                const csvData = await fetchGoogleSheetData();
+                const parsedData = parseCSV(csvData);
+                
+                if (parsedData.length === 0) {
+                    throw new Error('No data found in Google Sheet');
+                }
+                
+                const providers = processData(parsedData);
+                
+                const allWeeks = new Set();
+                Object.values(providers).forEach(provider => {
+                    Object.keys(provider).forEach(week => allWeeks.add(week));
+                });
+                
+                const sortedWeeks = Array.from(allWeeks).sort();
+                const last4Weeks = getLast4Weeks(sortedWeeks);
+                const latestWeek = getLatestWeek(sortedWeeks);
+                
+                // Hide loading, show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('kpiGrid').style.display = 'grid';
+                document.getElementById('heatmapSection').style.display = 'block';
+                
+                // Render KPI cards
+                const kpiGrid = document.getElementById('kpiGrid');
+                const providerAverages = [];
+                
+                Object.entries(providers).forEach(([name, weeks]) => {
+                    const avg = calculateAverage(weeks, last4Weeks);
+                    const clientCount = calculateUniqueClients(parsedData, name, latestWeek);
+                    providerAverages.push({ name, avg, weeks, clientCount });
+                    
+                    const isMeetingTarget = avg >= 25;
+                    const percentage = Math.min((avg / 25) * 100, 100);
+                    
+                    const card = document.createElement('div');
+                    card.className = 'kpi-card';
+                    card.style.animationDelay = `${providerAverages.length * 0.1}s`;
+                    
+                    card.innerHTML = `
+                        <div class="provider-name">
+                            ${name}
+                            <span class="status-badge ${isMeetingTarget ? 'status-meeting' : 'status-below'}">
+                                ${isMeetingTarget ? '✓ Target Met' : '✗ Below Target'}
+                            </span>
+                        </div>
+                        <div class="hours-display">
+                            <div class="hours-value">${avg.toFixed(1)}</div>
+                            <div class="hours-label">hrs/week avg</div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: ${percentage}%"></div>
+                        </div>
+                        <div class="target-info">Target: 25.0 hrs/week</div>
+                        <div class="client-count">
+                            <span class="client-count-value">${clientCount}</span>
+                            <span class="client-count-label">clients (latest week)</span>
+                        </div>
+                    `;
+                    
+                    kpiGrid.appendChild(card);
+                });
+                
+                // Render heatmap
+                const table = document.getElementById('heatmapTable');
+                
+                // Header row
+                const headerRow = document.createElement('tr');
+                headerRow.innerHTML = '<th>Provider</th>';
+                sortedWeeks.forEach(week => {
+                    const th = document.createElement('th');
+                    th.textContent = week;
+                    if (last4Weeks.includes(week)) {
+                        th.style.background = 'rgba(5, 191, 219, 0.1)';
+                        th.style.color = 'var(--accent)';
+                    }
+                    headerRow.appendChild(th);
+                });
+                table.appendChild(headerRow);
+                
+                // Data rows
+                Object.entries(providers).forEach(([name, weeks]) => {
+                    const row = document.createElement('tr');
+                    
+                    const nameCell = document.createElement('td');
+                    nameCell.className = 'provider-cell';
+                    nameCell.textContent = name;
+                    row.appendChild(nameCell);
+                    
+                    sortedWeeks.forEach(week => {
+                        const cell = document.createElement('td');
+                        const hours = weeks[week] || 0;
+                        cell.className = getHeatClass(hours);
+                        cell.textContent = hours > 0 ? hours.toFixed(1) : '—';
+                        row.appendChild(cell);
+                    });
+                    
+                    table.appendChild(row);
+                });
+                
+                // Render summary stats
+                const summaryStats = document.getElementById('summaryStats');
+                const avgOfAverages = providerAverages.reduce((sum, p) => sum + p.avg, 0) / providerAverages.length;
+                const meetingTarget = providerAverages.filter(p => p.avg >= 25).length;
+                const belowTarget = providerAverages.filter(p => p.avg < 25).length;
+                const highest = providerAverages.reduce((max, p) => p.avg > max.avg ? p : max);
+                
+                summaryStats.innerHTML = `
+                    <div class="stat-item">
+                        <div class="stat-label">Team Average</div>
+                        <div class="stat-value">${avgOfAverages.toFixed(1)} hrs</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Meeting Target</div>
+                        <div class="stat-value" style="color: var(--success)">${meetingTarget}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Below Target</div>
+                        <div class="stat-value" style="color: var(--warning)">${belowTarget}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Top Performer</div>
+                        <div class="stat-value" style="font-size: 1rem;">${highest.name.split(' ')[0]}</div>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error rendering dashboard:', error);
+                document.getElementById('loading').style.display = 'none';
+                const errorDiv = document.getElementById('error');
+                errorDiv.style.display = 'block';
+                errorDiv.innerHTML = `
+                    <h3>Error Loading Data</h3>
+                    <p>Could not load data from Google Sheets. Please ensure:</p>
+                    <ul>
+                        <li>The Google Sheet is set to "Anyone with the link can view"</li>
+                        <li>The sheet contains the correct columns (DateOfService, ProviderFirstName, ProviderLastName, ProcedureCode, TimeWorkedInHours, ClientId)</li>
+                        <li>Your internet connection is working</li>
+                    </ul>
+                    <p style="margin-top: 1rem; font-family: monospace; font-size: 0.9rem;">Error: ${error.message}</p>
+                `;
+            }
+        }
+
+        // Initialize dashboard on page load
+        renderDashboard();
+    </script>
+</body>
+</html>
