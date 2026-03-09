@@ -514,15 +514,28 @@
         }
 
         function processData(data) {
+            // Step 1: identify providers who have billed 97155 with agreed charges > 0
+            const qualified97155Providers = new Set(
+                data
+                    .filter(row => {
+                        const agreedCharges = parseFloat(row.ClientAgreedCharges);
+                        return row.ProcedureCode === '97155' && !isNaN(agreedCharges) && agreedCharges > 0;
+                    })
+                    .map(row => `${row.ProviderFirstName} ${row.ProviderLastName}`)
+            );
+
             const providers = {};
             
+            // Step 2: include all agreed-charge hours for those providers across all codes
             data.forEach(row => {
-                // Only include rows with agreed charges > 0
                 const agreedCharges = parseFloat(row.ClientAgreedCharges);
                 if (isNaN(agreedCharges) || agreedCharges <= 0) return;
 
                 const provider = `${row.ProviderFirstName} ${row.ProviderLastName}`;
-                
+
+                // Only include providers who have billed 97155
+                if (!qualified97155Providers.has(provider)) return;
+
                 if (provider === 'Nicole Dutton' || provider === 'Anna Morgan') return;
                 
                 const hours = parseFloat(row.TimeWorkedInHours);
