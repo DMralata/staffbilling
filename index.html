@@ -648,6 +648,109 @@
             margin-top: 1rem;
         }
 
+        /* ─── QUARTER PROGRESS ─────────────────────────────────── */
+        .quarter-progress-section {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .quarter-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            padding: 0.3rem 0.75rem;
+            border-radius: 20px;
+            background: rgba(5,191,219,0.1);
+            color: var(--accent);
+            border: 1px solid rgba(5,191,219,0.3);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .quarter-big-progress {
+            width: 100%;
+            height: 26px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 13px;
+            overflow: hidden;
+            margin-bottom: 0.6rem;
+        }
+
+        .quarter-big-progress-fill {
+            height: 100%;
+            border-radius: 13px;
+            transition: width 1.2s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quarter-big-progress-fill::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shimmer 2.5s infinite;
+        }
+
+        .quarter-stats-row {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+
+        .quarter-stat-label {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+            margin-bottom: 0.2rem;
+        }
+
+        .quarter-stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        /* ─── WoW GRID ──────────────────────────────────────────── */
+        .wow-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1.25rem;
+        }
+
+        .wow-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.65rem 0.85rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+        }
+
+        .wow-name  { font-weight: 600; color: var(--text); font-size: 0.85rem; }
+        .wow-hours { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--text-dim); margin-top: 0.1rem; }
+
+        .wow-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 700;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .wow-up   { background: rgba(5,191,219,0.12);   color: var(--accent);  border: 1px solid rgba(5,191,219,0.3); }
+        .wow-down { background: rgba(255,107,107,0.12); color: var(--warning); border: 1px solid rgba(255,107,107,0.3); }
+        .wow-new  { background: rgba(81,207,102,0.12);  color: var(--success); border: 1px solid rgba(81,207,102,0.3); }
+        .wow-gone { background: rgba(255,107,107,0.12); color: var(--warning); border: 1px solid rgba(255,107,107,0.3); }
+
         /* ─── SUPERVISION SECTION ──────────────────────────────── */
         .supervision-section {
             background: var(--bg-light);
@@ -860,6 +963,27 @@
             <!-- Summary row -->
             <div class="summary-stats" id="teamSummaryStats"></div>
 
+            <!-- Quarter progress to 10k hours -->
+            <div class="quarter-progress-section" id="quarterProgressSection"></div>
+
+            <!-- Team WoW trend chart -->
+            <div class="chart-section" style="margin-bottom:2rem">
+                <div class="section-title">Team Billable Hours — Week over Week</div>
+                <div class="chart-wrapper" style="height:260px">
+                    <canvas id="teamTrendCanvas"></canvas>
+                </div>
+                <div class="wow-grid" id="wowGrid"></div>
+            </div>
+
+            <!-- Client hours heatmap -->
+            <div class="heatmap-section" style="margin-bottom:2rem">
+                <div class="section-title">Client Hours Heatmap (97153) · Last 12 Weeks</div>
+                <div class="heatmap-scroll">
+                    <table class="heatmap-table" id="clientHeatmapTable"></table>
+                </div>
+                <div class="legend" id="clientHeatmapLegend"></div>
+            </div>
+
             <!-- All-staff KPI cards -->
             <div class="section-title" style="margin-bottom:1.25rem">Individual Performance</div>
             <div class="kpi-grid" id="teamKpiGrid"></div>
@@ -946,7 +1070,8 @@
         let sortedWeeks  = [];
         let last4Weeks   = [];
         let latestWeek   = '';
-        let trendChart   = null;
+        let trendChart            = null;
+        let teamTrendChartInst    = null;
 
         /* ── CSV PARSING ───────────────────────────────────────── */
         function parseCSV(csv) {
@@ -1183,6 +1308,341 @@
             }
         }
 
+        /* ── QUARTER / TREND / HEATMAP HELPERS ─────────────────── */
+
+        function calcQuarterProgress() {
+            const now     = new Date();
+            const q       = Math.floor(now.getMonth() / 3);
+            const qStart  = new Date(now.getFullYear(), q * 3, 1);
+            const qEnd    = new Date(now.getFullYear(), (q + 1) * 3, 0);
+            qEnd.setHours(23, 59, 59, 999);
+            const TARGET  = 10000;
+
+            let hoursToDate = 0;
+            allData.forEach(r => {
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                const d = new Date(r.DateOfService);
+                if (isNaN(d) || d < qStart || d > now) return;
+                hoursToDate += parseFloat(r.TimeWorkedInHours) || 0;
+            });
+
+            const daysElapsed    = Math.max(1, Math.round((now - qStart) / 86400000));
+            const daysTotal      = Math.round((qEnd - qStart) / 86400000) + 1;
+            const daysRemain     = Math.max(0, Math.round((qEnd - now) / 86400000));
+            const weeksRemain    = Math.max(0, Math.ceil(daysRemain / 7));
+            const rate           = hoursToDate / daysElapsed;
+            const projected      = rate * daysTotal;
+            const needed         = Math.max(0, TARGET - hoursToDate);
+            const hrsPerWkNeeded = weeksRemain > 0 ? needed / weeksRemain : 0;
+            const qName          = `Q${q + 1} ${now.getFullYear()}`;
+
+            return { qName, qStart, qEnd, TARGET, hoursToDate, pct: hoursToDate / TARGET,
+                     projected, daysRemain, weeksRemain, hrsPerWkNeeded, needed };
+        }
+
+        function buildWeeklyTotals() {
+            const totals = {};
+            Object.values(providerData).forEach(weeks => {
+                Object.entries(weeks).forEach(([week, hrs]) => {
+                    totals[week] = (totals[week] || 0) + hrs;
+                });
+            });
+            return sortedWeeks.map(w => ({ week: w, hours: totals[w] || 0 }));
+        }
+
+        function buildClientHeatmap() {
+            const recentWeeks = sortedWeeks.slice(-12);
+            const clientMap   = {};
+
+            allData.forEach(r => {
+                if (r.ProcedureCode !== '97153') return;
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                const week = getWeekNumber(r.DateOfService);
+                if (!recentWeeks.includes(week)) return;
+                const cid = r.ClientId || 'Unknown';
+                const hrs = parseFloat(r.TimeWorkedInHours) || 0;
+                if (!clientMap[cid]) clientMap[cid] = {};
+                clientMap[cid][week] = (clientMap[cid][week] || 0) + hrs;
+            });
+
+            const clients = Object.entries(clientMap)
+                .map(([id, weeks]) => ({
+                    id, weeks,
+                    total: Object.values(weeks).reduce((s, v) => s + v, 0)
+                }))
+                .sort((a, b) => b.total - a.total);
+
+            const maxHrs = Math.max(...clients.flatMap(c => Object.values(c.weeks)), 1);
+            return { clients, weeks: recentWeeks, maxHrs };
+        }
+
+        // 0→red, 0.5→amber, 1→green  (matches reference dashboard)
+        function clientHeatColor(hours, max) {
+            if (!hours || hours === 0) return { bg: 'rgba(22,27,34,0.9)', color: '#3a4555' };
+            const pct   = Math.min(hours / max, 1);
+            const r     = pct < 0.5 ? 220 : Math.round(220 - (pct - 0.5) * 2 * 160);
+            const g     = pct < 0.5 ? Math.round(pct * 2 * 180) : 180;
+            const alpha = 0.25 + pct * 0.7;
+            return {
+                bg:    `rgba(${r},${g},40,${alpha})`,
+                color: pct > 0.25 ? '#e6edf3' : '#7d8590'
+            };
+        }
+
+        function buildClientWoW() {
+            if (last4Weeks.length < 2) return [];
+            const curr = last4Weeks[last4Weeks.length - 1];
+            const prev = last4Weeks[last4Weeks.length - 2];
+
+            const byWeek = wk => {
+                const map = {};
+                allData.forEach(r => {
+                    if (r.ProcedureCode !== '97153') return;
+                    const ag = parseFloat(r.ClientAgreedCharges);
+                    if (isNaN(ag) || ag <= 0) return;
+                    if (getWeekNumber(r.DateOfService) !== wk) return;
+                    const cid = r.ClientId || 'Unknown';
+                    map[cid] = (map[cid] || 0) + (parseFloat(r.TimeWorkedInHours) || 0);
+                });
+                return map;
+            };
+
+            const c = byWeek(curr), p = byWeek(prev);
+            return Array.from(new Set([...Object.keys(c), ...Object.keys(p)]))
+                .map(id => {
+                    const ch = c[id] || 0, ph = p[id] || 0;
+                    const pct = ph > 0 ? (ch - ph) / ph * 100 : (ch > 0 ? 100 : 0);
+                    return { id, currH: ch, prevH: ph, change: ch - ph, pct,
+                             isNew: ph === 0 && ch > 0, isGone: ph > 0 && ch === 0 };
+                })
+                .filter(x => Math.abs(x.pct) >= 25 || x.isNew || x.isGone)
+                .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
+        }
+
+        /* ── RENDER: QUARTER PROGRESS ───────────────────────────── */
+        function renderQuarterProgress() {
+            const q     = calcQuarterProgress();
+            const pct   = Math.min(q.pct * 100, 100);
+            const color = q.pct >= 0.7 ? 'var(--success)' : q.pct >= 0.4 ? '#f59e0b' : 'var(--warning)';
+            const bar   = q.pct >= 0.7
+                ? 'linear-gradient(90deg,var(--success),#16a34a)'
+                : q.pct >= 0.4
+                ? 'linear-gradient(90deg,#f59e0b,#d97706)'
+                : 'linear-gradient(90deg,var(--warning),#dc2626)';
+            const fmt   = n => n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            const fmtD  = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+            document.getElementById('quarterProgressSection').innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
+                    <div class="section-title" style="margin-bottom:0">Progress to 10,000 Billable Hours</div>
+                    <span class="quarter-badge">${q.qName} &nbsp;·&nbsp; ${fmtD(q.qStart)} – ${fmtD(q.qEnd)}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.4rem">
+                    <div style="flex:1">
+                        <div class="quarter-big-progress">
+                            <div class="quarter-big-progress-fill" style="width:${pct}%;background:${bar}"></div>
+                        </div>
+                    </div>
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:${color};min-width:56px;text-align:right">${pct.toFixed(1)}%</div>
+                </div>
+                <div class="quarter-stats-row">
+                    <div>
+                        <div class="quarter-stat-label">Hours to Date</div>
+                        <div class="quarter-stat-value" style="color:var(--accent)">${fmt(q.hoursToDate)}</div>
+                    </div>
+                    <div>
+                        <div class="quarter-stat-label">Remaining</div>
+                        <div class="quarter-stat-value" style="color:${color}">${fmt(q.needed)}</div>
+                    </div>
+                    <div>
+                        <div class="quarter-stat-label">Weeks Left</div>
+                        <div class="quarter-stat-value">${q.weeksRemain}</div>
+                    </div>
+                    <div>
+                        <div class="quarter-stat-label">Hrs / Week Needed</div>
+                        <div class="quarter-stat-value" style="color:${color}">${q.hrsPerWkNeeded.toFixed(0)}</div>
+                    </div>
+                    <div>
+                        <div class="quarter-stat-label">Projected Total</div>
+                        <div class="quarter-stat-value" style="color:${q.projected >= q.TARGET ? 'var(--success)' : 'var(--warning)'}">${fmt(q.projected)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /* ── RENDER: TEAM TREND + WoW ───────────────────────────── */
+        function renderTeamTrendChart() {
+            if (teamTrendChartInst) { teamTrendChartInst.destroy(); teamTrendChartInst = null; }
+
+            const weeklyTotals = buildWeeklyTotals();
+            const display      = weeklyTotals.slice(-12);
+            const hoursData    = display.map(d => +d.hours.toFixed(2));
+            const barColors    = display.map((d, i) => {
+                if (i === 0) return 'rgba(5,191,219,0.55)';
+                return d.hours >= display[i - 1].hours
+                    ? 'rgba(81,207,102,0.75)'
+                    : 'rgba(255,107,107,0.75)';
+            });
+
+            teamTrendChartInst = new Chart(
+                document.getElementById('teamTrendCanvas').getContext('2d'),
+                {
+                    data: {
+                        labels: display.map(d => d.week),
+                        datasets: [
+                            {
+                                type: 'bar',
+                                label: 'Team Hours',
+                                data: hoursData,
+                                backgroundColor: barColors,
+                                borderRadius: 6,
+                                borderSkipped: false,
+                                order: 2,
+                            },
+                            {
+                                type: 'line',
+                                label: 'Trend',
+                                data: hoursData,
+                                borderColor: 'rgba(5,191,219,0.5)',
+                                borderWidth: 2,
+                                pointRadius: 3,
+                                pointBackgroundColor: '#05bfdb',
+                                fill: false,
+                                tension: 0.3,
+                                order: 1,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: true, labels: { color:'#8b949e', font:{family:'JetBrains Mono',size:11}, boxWidth:16, padding:16 } },
+                            tooltip: {
+                                backgroundColor:'#161b22', borderColor:'#30363d', borderWidth:1,
+                                titleColor:'#c9d1d9', bodyColor:'#8b949e',
+                                titleFont:{family:'JetBrains Mono'}, bodyFont:{family:'JetBrains Mono'},
+                                callbacks: { label: ctx => ` ${ctx.raw.toFixed(1)} hrs` }
+                            }
+                        },
+                        scales: {
+                            x: { grid:{color:'rgba(255,255,255,0.03)'}, ticks:{color:'#8b949e',font:{family:'JetBrains Mono',size:10},maxRotation:45} },
+                            y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#8b949e',font:{family:'JetBrains Mono',size:10},callback:v=>`${v}h`}, beginAtZero:true }
+                        }
+                    }
+                }
+            );
+
+            // WoW client changes
+            const wowData = buildClientWoW();
+            const grid    = document.getElementById('wowGrid');
+
+            if (!wowData.length) { grid.innerHTML = ''; return; }
+
+            grid.innerHTML = `
+                <div style="grid-column:1/-1;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem">
+                    Client Hour Changes · Week over Week · ≥25% shift (97153)
+                </div>
+                ${wowData.slice(0, 16).map(c => `
+                    <div class="wow-row">
+                        <div>
+                            <div class="wow-name">${c.id}</div>
+                            <div class="wow-hours">${c.prevH.toFixed(1)}h → ${c.currH.toFixed(1)}h</div>
+                        </div>
+                        <span class="wow-badge ${c.isNew ? 'wow-new' : c.isGone ? 'wow-gone' : c.change > 0 ? 'wow-up' : 'wow-down'}">
+                            ${c.isNew ? 'NEW' : c.isGone ? 'INACTIVE' : `${c.pct > 0 ? '+' : ''}${c.pct.toFixed(0)}%`}
+                        </span>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        /* ── RENDER: CLIENT HEATMAP ─────────────────────────────── */
+        function renderClientHeatmap() {
+            const { clients, weeks, maxHrs } = buildClientHeatmap();
+            const table = document.getElementById('clientHeatmapTable');
+            table.innerHTML = '';
+
+            if (!clients.length) {
+                table.innerHTML = `<tr><td style="padding:1rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.85rem">No 97153 data found.</td></tr>`;
+                return;
+            }
+
+            // Header
+            const thead = document.createElement('thead');
+            const hRow  = document.createElement('tr');
+            const thN   = document.createElement('th');
+            thN.textContent = 'Client';
+            thN.style.cssText = 'text-align:left;min-width:90px;padding-left:0.5rem';
+            hRow.appendChild(thN);
+
+            weeks.forEach(week => {
+                const th = document.createElement('th');
+                th.textContent = week;
+                if (last4Weeks.includes(week)) {
+                    th.style.background = 'rgba(5,191,219,0.12)';
+                    th.style.color = 'var(--accent)';
+                }
+                hRow.appendChild(th);
+            });
+
+            const thTot = document.createElement('th');
+            thTot.textContent = 'Total';
+            thTot.style.color = 'var(--accent)';
+            hRow.appendChild(thTot);
+            thead.appendChild(hRow);
+            table.appendChild(thead);
+
+            // Body
+            const tbody = document.createElement('tbody');
+            clients.forEach(client => {
+                const row = document.createElement('tr');
+
+                const nc = document.createElement('td');
+                nc.textContent = client.id;
+                nc.style.cssText = 'font-weight:600;color:var(--text);text-align:left;padding-left:0.5rem;white-space:nowrap;font-size:0.82rem';
+                row.appendChild(nc);
+
+                weeks.forEach(week => {
+                    const cell = document.createElement('td');
+                    const hrs  = client.weeks[week] || 0;
+                    const { bg, color } = clientHeatColor(hrs, maxHrs);
+                    cell.style.cssText = `background:${bg};color:${color};border-radius:5px;text-align:center;font-size:0.75rem;font-weight:600;padding:0.45rem 0.35rem;transition:transform 0.15s`;
+                    cell.textContent = hrs > 0 ? hrs.toFixed(1) : '';
+                    cell.title = `${client.id} · ${week}: ${hrs.toFixed(1)} hrs`;
+                    cell.addEventListener('mouseenter', () => cell.style.transform = 'scale(1.1)');
+                    cell.addEventListener('mouseleave', () => cell.style.transform = '');
+                    if (last4Weeks.includes(week) && hrs > 0) {
+                        cell.style.outline = '1px solid rgba(5,191,219,0.25)';
+                        cell.style.outlineOffset = '-1px';
+                    }
+                    row.appendChild(cell);
+                });
+
+                const tot = document.createElement('td');
+                tot.textContent = client.total.toFixed(1);
+                tot.style.cssText = "color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.82rem;text-align:center";
+                row.appendChild(tot);
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+
+            // Legend
+            const legend = document.getElementById('clientHeatmapLegend');
+            const swatches = [0.05, 0.2, 0.4, 0.6, 0.8, 1.0].map(p => {
+                const { bg } = clientHeatColor(p * maxHrs, maxHrs);
+                return `<div class="legend-box" style="background:${bg}"></div>`;
+            }).join('');
+            legend.innerHTML = `
+                <span style="font-size:0.72rem;color:var(--text-dim)">0 hrs</span>
+                ${swatches}
+                <span style="font-size:0.72rem;color:var(--text-dim)">${maxHrs.toFixed(0)} hrs (max)</span>
+            `;
+        }
+
         /* ── ALL / TEAM DASHBOARD ──────────────────────────────── */
         function renderAllDashboard() {
             hideAll();
@@ -1306,6 +1766,11 @@
                     });
                     table.appendChild(row);
                 });
+
+            /* ── Quarter progress, team trend, client heatmap ── */
+            renderQuarterProgress();
+            renderTeamTrendChart();
+            renderClientHeatmap();
         }
 
         /* ── INDIVIDUAL DASHBOARD ──────────────────────────────── */
