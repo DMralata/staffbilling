@@ -1031,39 +1031,42 @@
         }
 
         function calcSupervisionData(provider, targetWeeks) {
+            // Supervision % = 97155 hrs ÷ 97153 hrs
             const rows = allData.filter(r => {
                 const pname = `${r.ProviderFirstName} ${r.ProviderLastName}`;
                 const week  = getWeekNumber(r.DateOfService);
                 const ag    = parseFloat(r.ClientAgreedCharges);
-                return pname === provider && targetWeeks.includes(week) && ag > 0;
+                const code  = r.ProcedureCode;
+                return pname === provider && targetWeeks.includes(week) && ag > 0
+                    && (code === '97153' || code === '97155');
             });
 
-            let provTotal = 0, prov97155 = 0;
+            let prov97153 = 0, prov97155 = 0;
             const clientMap = {};
 
             rows.forEach(r => {
                 const hrs = parseFloat(r.TimeWorkedInHours) || 0;
                 const cid = r.ClientId || 'Unknown';
-                provTotal += hrs;
+                if (r.ProcedureCode === '97153') prov97153 += hrs;
                 if (r.ProcedureCode === '97155') prov97155 += hrs;
-                if (!clientMap[cid]) clientMap[cid] = { total: 0, hrs97155: 0 };
-                clientMap[cid].total += hrs;
+                if (!clientMap[cid]) clientMap[cid] = { hrs97153: 0, hrs97155: 0 };
+                if (r.ProcedureCode === '97153') clientMap[cid].hrs97153 += hrs;
                 if (r.ProcedureCode === '97155') clientMap[cid].hrs97155 += hrs;
             });
 
             const clients = Object.entries(clientMap)
                 .map(([id, d]) => ({
                     id,
-                    total:    d.total,
+                    hrs97153: d.hrs97153,
                     hrs97155: d.hrs97155,
-                    pct:      d.total > 0 ? (d.hrs97155 / d.total) * 100 : 0,
+                    pct:      d.hrs97153 > 0 ? (d.hrs97155 / d.hrs97153) * 100 : 0,
                 }))
                 .sort((a, b) => a.pct - b.pct); // worst first
 
             return {
-                provTotal,
+                prov97153,
                 prov97155,
-                providerPct:          provTotal > 0 ? (prov97155 / provTotal) * 100 : 0,
+                providerPct:          prov97153 > 0 ? (prov97155 / prov97153) * 100 : 0,
                 clients,
                 clientsMeetingTarget: clients.filter(c => c.pct >= 10).length,
             };
@@ -1436,7 +1439,7 @@
                         ${sup.providerPct.toFixed(1)}%
                     </div>
                     <div class="supervision-stat-sub">
-                        ${sup.prov97155.toFixed(1)} of ${sup.provTotal.toFixed(1)} hrs are 97155
+                        ${sup.prov97155.toFixed(1)} supervision hrs ÷ ${sup.prov97153.toFixed(1)} direct hrs (97153)
                     </div>
                     <div style="margin-top:0.6rem">
                         <span class="status-badge ${pOn ? 'status-meeting' : 'status-below'}">
@@ -1472,9 +1475,9 @@
             thead.innerHTML = `
                 <tr>
                     <th>Client ID</th>
-                    <th>Total Hrs</th>
+                    <th>97153 Hrs</th>
                     <th>97155 Hrs</th>
-                    <th class="pct-bar-cell">Supervision % <span style="font-weight:400;opacity:0.6">(target 10%)</span></th>
+                    <th class="pct-bar-cell">97155 ÷ 97153 <span style="font-weight:400;opacity:0.6">(target 10%)</span></th>
                     <th>Status</th>
                 </tr>
             `;
@@ -1490,7 +1493,7 @@
                 if (!met) tr.className = 'row-warn';
                 tr.innerHTML = `
                     <td style="font-weight:600;color:var(--text)">${c.id}</td>
-                    <td>${c.total.toFixed(1)}</td>
+                    <td>${c.hrs97153.toFixed(1)}</td>
                     <td style="color:${c.hrs97155 > 0 ? 'var(--accent)' : 'var(--text-dim)'}">${c.hrs97155.toFixed(1)}</td>
                     <td class="pct-bar-cell">
                         <div class="pct-bar-wrap">
