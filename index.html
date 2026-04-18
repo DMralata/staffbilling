@@ -1964,34 +1964,44 @@
             const TARGET = 2;
             const PROC   = '97151';
 
-            // Count assessments (distinct clients billed 97151 with agreed charges) per week
-            const countByWeek = {};
-            sortedWeeks.forEach(w => countByWeek[w] = new Set());
+            // Build per-week map: week → [ { client, provider, date } ]
+            const detailByWeek = {};
+            sortedWeeks.forEach(w => detailByWeek[w] = []);
             allData.forEach(r => {
                 if (r.ProcedureCode !== PROC) return;
                 const ag = parseFloat(r.ClientAgreedCharges);
                 if (isNaN(ag) || ag <= 0) return;
                 const week = getWeekNumber(r.DateOfService);
-                if (!week || !(week in countByWeek)) return;
-                const cid = r.ClientId || r.ProviderFirstName; // distinct per client
-                countByWeek[week].add(cid);
+                if (!week || !(week in detailByWeek)) return;
+                detailByWeek[week].push({
+                    client:   r.ClientId   || '—',
+                    provider: `${r.ProviderFirstName || ''} ${r.ProviderLastName || ''}`.trim() || '—',
+                    date:     r.DateOfService || '',
+                });
+            });
+
+            // Deduplicate by client per week (keep first occurrence)
+            Object.keys(detailByWeek).forEach(w => {
+                const seen = new Set();
+                detailByWeek[w] = detailByWeek[w].filter(d => {
+                    if (seen.has(d.client)) return false;
+                    seen.add(d.client); return true;
+                });
             });
 
             const recentWeeks = sortedWeeks.slice(-6);
-            const latestCount = countByWeek[latestWeek]?.size || 0;
+            const latestCount = detailByWeek[latestWeek]?.length || 0;
             const met         = latestCount >= TARGET;
 
             const historyChips = recentWeeks.map(w => {
-                const cnt = countByWeek[w]?.size || 0;
-                const cls = cnt === 0 ? 'chip-zero' : cnt >= TARGET ? 'chip-met' : 'chip-missed';
+                const cnt   = detailByWeek[w]?.length || 0;
+                const cls   = cnt === 0 ? 'chip-zero' : cnt >= TARGET ? 'chip-met' : 'chip-missed';
                 const label = cnt === 0 ? '—' : cnt.toString();
-                // shorten week label: "2025-W04" → "W04"
                 const short = w.replace(/^\d{4}-/, '');
-                return `
-                    <div class="assessment-week-chip">
-                        <span class="chip-week">${short}</span>
-                        <span class="chip-count ${cls}">${label}</span>
-                    </div>`;
+                return `<div class="assessment-week-chip" style="cursor:${cnt>0?'pointer':'default'}" data-week="${w}" title="${cnt>0?'Click to see details':'No assessments'}">
+                            <span class="chip-week">${short}</span>
+                            <span class="chip-count ${cls}">${label}</span>
+                        </div>`;
             }).join('');
 
             const banner = document.getElementById('assessmentBanner');
@@ -2010,7 +2020,48 @@
                         </div>
                     </div>
                     <div class="assessment-history">${historyChips}</div>
-                </div>`;
+                </div>
+                <div id="assessmentDetail" style="display:none;margin-top:0.75rem;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem"></div>`;
+
+            // Chip click → show detail panel
+            banner.querySelectorAll('.assessment-week-chip[data-week]').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const w       = chip.dataset.week;
+                    const detail  = document.getElementById('assessmentDetail');
+                    const records = detailByWeek[w] || [];
+                    if (!records.length) return;
+
+                    const isOpen = detail.style.display !== 'none' && detail.dataset.week === w;
+                    if (isOpen) { detail.style.display = 'none'; detail.dataset.week = ''; return; }
+
+                    const rows = records.map(d => `
+                        <tr>
+                            <td style="padding:0.4rem 0.75rem 0.4rem 0;color:var(--text);font-weight:600">${d.client}</td>
+                            <td style="padding:0.4rem 0.75rem;color:var(--text-dim)">${d.provider}</td>
+                            <td style="padding:0.4rem 0;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.78rem">${d.date}</td>
+                        </tr>`).join('');
+
+                    detail.dataset.week = w;
+                    detail.style.display = 'block';
+                    detail.innerHTML = `
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
+                            <span style="font-size:0.72rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-dim)">
+                                97151 Assessments · ${w} · ${records.length} client${records.length!==1?'s':''}
+                            </span>
+                            <span style="cursor:pointer;color:var(--text-dim);font-size:0.8rem" onclick="document.getElementById('assessmentDetail').style.display='none'">✕ close</span>
+                        </div>
+                        <table style="width:100%;border-collapse:collapse;font-size:0.82rem">
+                            <thead>
+                                <tr style="border-bottom:1px solid var(--border)">
+                                    <th style="text-align:left;padding-bottom:0.35rem;color:var(--text-dim);font-weight:500;font-size:0.72rem">Client</th>
+                                    <th style="text-align:left;padding:0 0.75rem 0.35rem;color:var(--text-dim);font-weight:500;font-size:0.72rem">Provider</th>
+                                    <th style="text-align:left;padding-bottom:0.35rem;color:var(--text-dim);font-weight:500;font-size:0.72rem">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>`;
+                });
+            });
         }
 
         /* ── ALL / TEAM DASHBOARD ──────────────────────────────── */
