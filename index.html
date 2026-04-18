@@ -1307,8 +1307,9 @@
         const SHEET_ID   = '1IwjOdgUG-gHzaQdfwxyUtIcpkDFyFKBylfHhVJvtTe0';
         const MAIN_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
         const PASS_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Passwords`;
-        const AUTH_URL   = 'https://docs.google.com/spreadsheets/d/1tnUU6w-OHuXgaesHDnwW-uoR15Czr0Cl3L3iZIN0jUc/gviz/tq?tqx=out:csv';
-        const AUTH_WEEKS = 26; // 6-month authorization period ≈ 26 weeks
+        const AUTH_URL      = 'https://docs.google.com/spreadsheets/d/1tnUU6w-OHuXgaesHDnwW-uoR15Czr0Cl3L3iZIN0jUc/gviz/tq?tqx=out:csv';
+        const AUTH_WEEKS    = 26; // 6-month authorization period ≈ 26 weeks
+        const VIABILITY_URL = 'https://docs.google.com/spreadsheets/d/1RIV-wZCmC3mYTqOXu7Gk6-z-pT_HcXYIL459eWp2SMo/gviz/tq?tqx=out:csv';
         const TARGET_HRS = 25;
         const ALL_KEY    = 'ALL';
         const PSYCH_KEY  = 'Psychology';
@@ -1323,6 +1324,7 @@
         let passwordMap  = {};
         let authHours    = {}; // clientId → weekly authorized hours (units ÷ 4 ÷ 26)
         let clientNames  = {}; // clientId → "XX XX" (first 2 of first + last name)
+        let notViable    = new Set(); // clientIds marked as not viable for ABA
         let providerData = {};
         let sortedWeeks  = [];
         let last4Weeks   = [];
@@ -2176,60 +2178,136 @@
             document.getElementById('psychDashboard').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
-            const display12 = sortedWeeks.slice(-12);
+            const display4 = sortedWeeks.slice(-4);
 
-            // Build weekly diagnosis counts per provider: name → { week → count }
-            const diagByProvider = {};
-            PSYCH_PROVIDERS.forEach(p => { diagByProvider[p.name] = {}; });
+            // Build per-provider, per-week client detail list
+            const detailByProvider = {};
+            PSYCH_PROVIDERS.forEach(p => { detailByProvider[p.name] = {}; });
 
             allData.forEach(r => {
                 if (r.ProcedureCode !== PSYCH_CODE) return;
                 const ag = parseFloat(r.ClientAgreedCharges);
                 if (isNaN(ag) || ag <= 0) return;
                 const pname = `${r.ProviderFirstName || ''} ${r.ProviderLastName || ''}`.trim();
-                if (!diagByProvider[pname]) return;
+                if (!detailByProvider[pname]) return;
                 const week = getWeekNumber(r.DateOfService);
                 if (!week) return;
-                // Count unique clients per week (one diagnosis per client per week)
-                const cid = r.ClientId || r.DateOfService;
-                if (!diagByProvider[pname][week]) diagByProvider[pname][week] = new Set();
-                diagByProvider[pname][week].add(cid);
+                const cid = r.ClientId || '—';
+                if (!detailByProvider[pname][week]) detailByProvider[pname][week] = [];
+                // Deduplicate by client within week
+                if (!detailByProvider[pname][week].find(d => d.clientId === cid)) {
+                    detailByProvider[pname][week].push({
+                        clientId: cid,
+                        name: [r.ClientFirstName, r.ClientLastName].filter(Boolean).join(' ') || cid,
+                        date: r.DateOfService || '',
+                    });
+                }
             });
 
-            // Convert Sets to counts
-            PSYCH_PROVIDERS.forEach(p => {
-                Object.keys(diagByProvider[p.name]).forEach(w => {
-                    diagByProvider[p.name][w] = diagByProvider[p.name][w].size;
-                });
+            // ── Conversion pipeline ──────────────────────────────────
+            // All clients diagnosed (96136) by either psych provider
+            const allDiagnosed = new Map(); // clientId → { name, diagDate, diagProvider }
+            allData.forEach(r => {
+                if (r.ProcedureCode !== PSYCH_CODE) return;
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                const pname = `${r.ProviderFirstName || ''} ${r.ProviderLastName || ''}`.trim();
+                if (!PSYCH_PROVIDERS.some(p => p.name === pname)) return;
+                const cid = r.ClientId;
+                if (!cid) return;
+                const d = new Date(r.DateOfService);
+                if (!allDiagnosed.has(cid) || d > allDiagnosed.get(cid).diagDate) {
+                    allDiagnosed.set(cid, {
+                        name: [r.ClientFirstName, r.ClientLastName].filter(Boolean).join(' ') || cid,
+                        diagDate: d,
+                        diagProvider: pname.split(' ')[0],
+                    });
+                }
             });
 
-            const chartInstances = [];
+            // Which diagnosed clients have had a 97151 (ABA assessment)?
+            const has97151 = new Set();
+            allData.forEach(r => {
+                if (r.ProcedureCode !== '97151') return;
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (!isNaN(ag) && ag > 0 && r.ClientId) has97151.add(r.ClientId);
+            });
 
+            // Exclude not-viable clients from pipeline counts
+            const viableDiagnosed = [...allDiagnosed.entries()].filter(([cid]) => !notViable.has(cid));
+            const totalDiag   = viableDiagnosed.length;
+            const converted   = viableDiagnosed.filter(([cid]) => has97151.has(cid)).length;
+            const pipeline    = viableDiagnosed
+                .filter(([cid]) => !has97151.has(cid))
+                .sort((a, b) => b[1].diagDate - a[1].diagDate);
+            const convPct     = totalDiag > 0 ? (converted / totalDiag * 100).toFixed(0) : 0;
+            const fmtDate     = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+
+            const pipelineRows = pipeline.map(([cid, d]) => `
+                <tr>
+                    <td style="padding:0.35rem 0.75rem 0.35rem 0;color:var(--text);font-weight:600;font-size:0.82rem">${d.name}</td>
+                    <td style="padding:0.35rem 0.75rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.74rem">${cid}</td>
+                    <td style="padding:0.35rem 0.75rem;color:var(--text-dim);font-size:0.78rem">${d.diagProvider}</td>
+                    <td style="padding:0.35rem 0;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.74rem">${fmtDate(d.diagDate)}</td>
+                </tr>`).join('');
+
+            const conversionHTML = `
+                <div class="psych-card" style="margin-bottom:1.5rem">
+                    <div class="section-title" style="margin-bottom:1rem">ABA Assessment Pipeline</div>
+                    <div class="psych-kpi-row" style="margin-bottom:${pipeline.length ? '1.25rem' : '0'}">
+                        <div class="psych-kpi">
+                            <div class="psych-kpi-val" style="color:var(--accent)">${totalDiag}</div>
+                            <div class="psych-kpi-label">Total diagnosed</div>
+                        </div>
+                        <div class="psych-kpi">
+                            <div class="psych-kpi-val" style="color:var(--success)">${converted}</div>
+                            <div class="psych-kpi-label">Got ABA assessment</div>
+                        </div>
+                        <div class="psych-kpi">
+                            <div class="psych-kpi-val" style="color:${pipeline.length ? 'var(--warning)' : 'var(--success)'}">${pipeline.length}</div>
+                            <div class="psych-kpi-label">Awaiting 97151</div>
+                        </div>
+                        <div class="psych-kpi">
+                            <div class="psych-kpi-val">${convPct}%</div>
+                            <div class="psych-kpi-label">Conversion rate</div>
+                        </div>
+                    </div>
+                    ${pipeline.length ? `
+                    <div style="font-size:0.7rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-dim);margin-bottom:0.6rem">
+                        Waiting for ABA Assessment · ${pipeline.length} client${pipeline.length!==1?'s':''}
+                    </div>
+                    <div style="max-height:220px;overflow-y:auto;border-radius:6px">
+                        <table style="width:100%;border-collapse:collapse">
+                            <thead><tr style="border-bottom:1px solid var(--border)">
+                                <th style="text-align:left;padding-bottom:0.3rem;color:var(--text-dim);font-weight:500;font-size:0.7rem">Client Name</th>
+                                <th style="text-align:left;padding:0 0.75rem 0.3rem;color:var(--text-dim);font-weight:500;font-size:0.7rem">ID</th>
+                                <th style="text-align:left;padding:0 0.75rem 0.3rem;color:var(--text-dim);font-weight:500;font-size:0.7rem">Diagnosed By</th>
+                                <th style="text-align:left;padding-bottom:0.3rem;color:var(--text-dim);font-weight:500;font-size:0.7rem">Diag. Date</th>
+                            </tr></thead>
+                            <tbody>${pipelineRows}</tbody>
+                        </table>
+                    </div>` : `<div style="color:var(--success);font-size:0.85rem;font-weight:600">✅ All diagnosed clients have received an ABA assessment.</div>`}
+                </div>`;
+
+            // ── Individual provider cards ────────────────────────────
             const cards = PSYCH_PROVIDERS.map((p, idx) => {
-                const weekCounts = display12.map(w => diagByProvider[p.name][w] || 0);
-                const thisWeek   = diagByProvider[p.name][latestWeek] || 0;
-                const avg4       = (() => {
-                    const vals = last4Weeks.map(w => diagByProvider[p.name][w] || 0);
-                    return vals.reduce((s,v)=>s+v,0) / vals.length;
-                })();
+                const weekCounts = display4.map(w => (detailByProvider[p.name][w] || []).length);
+                const thisWeek   = (detailByProvider[p.name][latestWeek] || []).length;
+                const nonZero    = weekCounts.filter(v => v > 0);
+                const avg4       = nonZero.length ? nonZero.reduce((s,v)=>s+v,0) / nonZero.length : 0;
                 const met        = thisWeek >= p.target;
                 const totalAll   = weekCounts.reduce((s,v)=>s+v,0);
-
-                // 8-week rolling avg
-                const rolling = weekCounts.map((_, i) => {
-                    const slice = weekCounts.slice(Math.max(0, i-7), i+1);
-                    return +(slice.reduce((s,v)=>s+v,0) / slice.length).toFixed(2);
+                const barColors  = weekCounts.map(v => v >= p.target ? 'rgba(81,207,102,0.75)' : 'rgba(255,107,107,0.7)');
+                const trendLine  = weekCounts.map((_, i) => {
+                    const sl = weekCounts.slice(0, i+1);
+                    return +(sl.reduce((s,v)=>s+v,0) / sl.length).toFixed(2);
                 });
 
-                const barColors = weekCounts.map(v =>
-                    v >= p.target ? 'rgba(81,207,102,0.75)' : 'rgba(255,107,107,0.7)'
-                );
-
-                const pipHTML = display12.slice(-8).map(w => {
-                    const cnt = diagByProvider[p.name][w] || 0;
-                    const cls = cnt === 0 ? 'pw-zero' : cnt >= p.target ? 'pw-met' : 'pw-missed';
+                const pipHTML = display4.map(w => {
+                    const cnt   = (detailByProvider[p.name][w] || []).length;
+                    const cls   = cnt === 0 ? 'pw-zero' : cnt >= p.target ? 'pw-met' : 'pw-missed';
                     const short = w.replace(/^\d{4}-/, '');
-                    return `<div class="psych-week-pip">
+                    return `<div class="psych-week-pip" ${cnt > 0 ? `data-prov="${encodeURIComponent(p.name)}" data-week="${w}" style="cursor:pointer" title="Click to see clients"` : ''}>
                         <span class="pw-label">${short}</span>
                         <span class="pw-val ${cls}">${cnt || '—'}</span>
                     </div>`;
@@ -2258,74 +2336,86 @@
                             </div>
                             <div class="psych-kpi">
                                 <div class="psych-kpi-val" style="color:var(--text-dim)">${totalAll}</div>
-                                <div class="psych-kpi-label">Last 12 wks</div>
+                                <div class="psych-kpi-label">Last 4 wks</div>
                             </div>
                         </div>
                         <div class="psych-chart-wrap">
                             <canvas id="psychChart${idx}"></canvas>
                         </div>
-                        <div class="psych-week-row">${pipHTML}</div>
+                        <div class="psych-week-row" id="psychPips${idx}">${pipHTML}</div>
+                        <div id="psychDetail${idx}" class="psych-detail-panel" style="display:none;margin-top:0.75rem;background:var(--bg-card);border:1px solid var(--border);border-radius:9px;padding:0.9rem 1rem"></div>
                     </div>`;
             }).join('');
 
-            document.getElementById('psychContent').innerHTML = `<div class="psych-grid">${cards}</div>`;
+            document.getElementById('psychContent').innerHTML = conversionHTML + `<div class="psych-grid">${cards}</div>`;
 
-            // Render charts after DOM is set
+            // Wire up pip click → client detail panel
             PSYCH_PROVIDERS.forEach((p, idx) => {
-                const weekCounts = display12.map(w => diagByProvider[p.name][w] || 0);
-                const rolling = weekCounts.map((_, i) => {
-                    const slice = weekCounts.slice(Math.max(0, i-7), i+1);
-                    return +(slice.reduce((s,v)=>s+v,0) / slice.length).toFixed(2);
+                const pipsEl = document.getElementById(`psychPips${idx}`);
+                const detEl  = document.getElementById(`psychDetail${idx}`);
+                if (!pipsEl) return;
+                pipsEl.querySelectorAll('[data-week]').forEach(pip => {
+                    pip.addEventListener('click', () => {
+                        const w       = pip.dataset.week;
+                        const pname   = decodeURIComponent(pip.dataset.prov);
+                        const isOpen  = detEl.style.display !== 'none' && detEl.dataset.week === w;
+                        if (isOpen) { detEl.style.display = 'none'; detEl.dataset.week = ''; return; }
+                        const records = detailByProvider[pname][w] || [];
+                        detEl.dataset.week = w;
+                        detEl.style.display = 'block';
+                        detEl.innerHTML = `
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+                                <span style="font-size:0.7rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-dim)">${w} · ${records.length} diagnosis${records.length!==1?'es':''}</span>
+                                <span style="cursor:pointer;color:var(--text-dim);font-size:0.8rem;user-select:none" onclick="this.closest('.psych-detail-panel').style.display='none'">✕ close</span>
+                            </div>
+                            <table style="width:100%;border-collapse:collapse;font-size:0.82rem">
+                                <thead><tr style="border-bottom:1px solid var(--border)">
+                                    <th style="text-align:left;padding-bottom:0.3rem;color:var(--text-dim);font-weight:500;font-size:0.7rem">Client Name</th>
+                                    <th style="text-align:left;padding:0 0 0.3rem 0.75rem;color:var(--text-dim);font-weight:500;font-size:0.7rem">ID</th>
+                                    <th style="text-align:left;padding:0 0 0.3rem 0.75rem;color:var(--text-dim);font-weight:500;font-size:0.7rem">Date</th>
+                                </tr></thead>
+                                <tbody>${records.map(d => `
+                                    <tr>
+                                        <td style="padding:0.32rem 0;color:var(--text);font-weight:600">${d.name}</td>
+                                        <td style="padding:0.32rem 0.75rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.74rem">${d.clientId}</td>
+                                        <td style="padding:0.32rem 0 0.32rem 0.75rem;color:var(--text-dim);font-size:0.78rem">${d.date}</td>
+                                    </tr>`).join('')}
+                                </tbody>
+                            </table>`;
+                    });
                 });
-                const barColors = weekCounts.map(v =>
-                    v >= p.target ? 'rgba(81,207,102,0.75)' : 'rgba(255,107,107,0.7)'
-                );
-                const targetLine = display12.map(() => p.target);
+            });
 
-                const inst = new Chart(
-                    document.getElementById(`psychChart${idx}`).getContext('2d'), {
+            // Charts
+            PSYCH_PROVIDERS.forEach((p, idx) => {
+                const weekCounts = display4.map(w => (detailByProvider[p.name][w] || []).length);
+                const trendLine  = weekCounts.map((_, i) => {
+                    const sl = weekCounts.slice(0, i+1);
+                    return +(sl.reduce((s,v)=>s+v,0) / sl.length).toFixed(2);
+                });
+                const barColors = weekCounts.map(v => v >= p.target ? 'rgba(81,207,102,0.75)' : 'rgba(255,107,107,0.7)');
+                new Chart(document.getElementById(`psychChart${idx}`).getContext('2d'), {
                     data: {
-                        labels: display12,
+                        labels: display4,
                         datasets: [
-                            {
-                                type: 'bar', label: 'Diagnoses',
-                                data: weekCounts, backgroundColor: barColors,
-                                borderRadius: 5, borderSkipped: false, order: 3,
-                            },
-                            {
-                                type: 'line', label: '8-Wk Rolling Avg',
-                                data: rolling,
-                                borderColor: 'rgba(5,191,219,0.85)', borderWidth: 2,
-                                pointRadius: 3, pointBackgroundColor: '#05bfdb',
-                                fill: false, tension: 0.4, order: 2,
-                            },
-                            {
-                                type: 'line', label: `Target (${p.target})`,
-                                data: targetLine,
-                                borderColor: 'rgba(81,207,102,0.5)', borderWidth: 1.5,
-                                borderDash: [6,3], pointRadius: 0,
-                                fill: false, order: 1,
-                            },
+                            { type:'bar',  label:'Diagnoses',       data:weekCounts,               backgroundColor:barColors, borderRadius:5, borderSkipped:false, order:3 },
+                            { type:'line', label:'Trend',            data:trendLine,                borderColor:'rgba(5,191,219,0.85)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#05bfdb', fill:false, tension:0.3, order:2 },
+                            { type:'line', label:`Target (${p.target})`, data:display4.map(()=>p.target), borderColor:'rgba(81,207,102,0.5)', borderWidth:1.5, borderDash:[6,3], pointRadius:0, fill:false, order:1 },
                         ]
                     },
                     options: {
-                        responsive: true, maintainAspectRatio: false,
-                        interaction: { mode: 'index', intersect: false },
-                        plugins: {
-                            legend: { display: true, labels: { color:'#8b949e', font:{family:'JetBrains Mono',size:10}, boxWidth:14, padding:12 } },
-                            tooltip: {
-                                backgroundColor:'#161b22', borderColor:'#30363d', borderWidth:1,
-                                titleColor:'#c9d1d9', bodyColor:'#8b949e',
-                                titleFont:{family:'JetBrains Mono'}, bodyFont:{family:'JetBrains Mono'},
-                            }
+                        responsive:true, maintainAspectRatio:false,
+                        interaction:{mode:'index',intersect:false},
+                        plugins:{
+                            legend:{display:true,labels:{color:'#8b949e',font:{family:'JetBrains Mono',size:10},boxWidth:14,padding:12}},
+                            tooltip:{backgroundColor:'#161b22',borderColor:'#30363d',borderWidth:1,titleColor:'#c9d1d9',bodyColor:'#8b949e',titleFont:{family:'JetBrains Mono'},bodyFont:{family:'JetBrains Mono'}}
                         },
-                        scales: {
-                            x: { grid:{color:'rgba(255,255,255,0.03)'}, ticks:{color:'#8b949e',font:{family:'JetBrains Mono',size:9},maxRotation:45} },
-                            y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#8b949e',font:{family:'JetBrains Mono',size:10}}, beginAtZero:true, suggestedMax: p.target + 2 }
+                        scales:{
+                            x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#8b949e',font:{family:'JetBrains Mono',size:10}}},
+                            y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#8b949e',font:{family:'JetBrains Mono',size:10}},beginAtZero:true,suggestedMax:p.target+2}
                         }
                     }
                 });
-                chartInstances.push(inst);
             });
         }
 
@@ -2923,13 +3013,14 @@
         /* ── INIT ──────────────────────────────────────────────── */
         async function init() {
             try {
-                const [mainText, passText, authText] = await Promise.all([
+                const [mainText, passText, authText, viabText] = await Promise.all([
                     fetch(MAIN_URL).then(r => {
                         if (!r.ok) throw new Error(`HTTP ${r.status}`);
                         return r.text();
                     }),
                     fetch(PASS_URL).then(r => r.ok ? r.text() : '').catch(() => ''),
-                    fetch(AUTH_URL).then(r => r.ok ? r.text() : '').catch(() => '')
+                    fetch(AUTH_URL).then(r => r.ok ? r.text() : '').catch(() => ''),
+                    fetch(VIABILITY_URL).then(r => r.ok ? r.text() : '').catch(() => '')
                 ]);
 
                 allData = parseCSV(mainText);
@@ -2955,6 +3046,32 @@
                             });
                         } else {
                             console.warn('Auth sheet columns not recognized. Expected "ClientID" and "AuthorizedUnits". Found:', keys);
+                        }
+                    }
+                }
+
+                // Parse not-viable sheet
+                if (viabText) {
+                    const viabRows = parseCSV(viabText);
+                    if (viabRows.length) {
+                        const keys  = Object.keys(viabRows[0]);
+                        const idKey = keys.find(k => k.toLowerCase().replace(/[\s_]/g,'').includes('clientid'));
+                        // Accept any column whose name contains "viable", "status", or "eligible"
+                        const flagKey = keys.find(k => {
+                            const n = k.toLowerCase().replace(/[\s_]/g,'');
+                            return n.includes('viable') || n.includes('status') || n.includes('eligible');
+                        });
+                        if (idKey && flagKey) {
+                            viabRows.forEach(row => {
+                                const id  = (row[idKey]   || '').trim();
+                                const val = (row[flagKey] || '').trim().toLowerCase();
+                                // Mark as not viable if value contains "not", "no", "false", or "0"
+                                if (id && (val.includes('not') || val === 'no' || val === 'false' || val === '0')) {
+                                    notViable.add(id);
+                                }
+                            });
+                        } else {
+                            console.warn('Viability sheet: columns not recognized. Found:', keys);
                         }
                     }
                 }
