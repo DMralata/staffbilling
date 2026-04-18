@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Billing Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap');
 
@@ -2254,7 +2255,10 @@
 
             const conversionHTML = `
                 <div class="psych-card" style="margin-bottom:1.5rem">
-                    <div class="section-title" style="margin-bottom:1rem">ABA Assessment Pipeline</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+                        <div class="section-title" style="margin-bottom:0">ABA Assessment Pipeline</div>
+                        ${pipeline.length ? `<button id="pipelineDownloadBtn" style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;padding:0.35rem 0.9rem;border-radius:7px;border:1px solid rgba(5,191,219,0.35);background:rgba(5,191,219,0.1);color:var(--accent);cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(5,191,219,0.2)'" onmouseout="this.style.background='rgba(5,191,219,0.1)'">↓ Download Excel</button>` : ''}
+                    </div>
                     <div class="psych-kpi-row" style="margin-bottom:${pipeline.length ? '1.25rem' : '0'}">
                         <div class="psych-kpi">
                             <div class="psych-kpi-val" style="color:var(--accent)">${totalDiag}</div>
@@ -2350,6 +2354,24 @@
             }).join('');
 
             document.getElementById('psychContent').innerHTML = conversionHTML + `<div class="psych-grid">${cards}</div>`;
+
+            // Wire up pipeline Excel download
+            const dlBtn = document.getElementById('pipelineDownloadBtn');
+            if (dlBtn) {
+                dlBtn.addEventListener('click', () => {
+                    const fmtDate = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+                    const wsData = [
+                        ['Client Name', 'Client ID', 'Diagnosed By', 'Diagnosis Date'],
+                        ...pipeline.map(([cid, d]) => [d.name, cid, d.diagProvider, fmtDate(d.diagDate)])
+                    ];
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+                    // Column widths
+                    ws['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
+                    XLSX.utils.book_append_sheet(wb, ws, 'ABA Pipeline');
+                    XLSX.writeFile(wb, `ABA_Assessment_Pipeline_${new Date().toISOString().slice(0,10)}.xlsx`);
+                });
+            }
 
             // Wire up pip click → client detail panel
             PSYCH_PROVIDERS.forEach((p, idx) => {
