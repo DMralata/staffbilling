@@ -2066,8 +2066,13 @@
                 if (isNaN(ag) || ag <= 0) return;
                 const week = getWeekNumber(r.DateOfService);
                 if (!week || !(week in detailByWeek)) return;
+                const cid      = r.ClientId || '—';
+                const cfirst   = r.ClientFirstName || '';
+                const clast    = r.ClientLastName  || '';
+                const fullName = [cfirst, clast].filter(Boolean).join(' ') || cid;
                 detailByWeek[week].push({
-                    client:   r.ClientId   || '—',
+                    client:   cid,
+                    name:     fullName,
                     provider: `${r.ProviderFirstName || ''} ${r.ProviderLastName || ''}`.trim() || '—',
                     date:     r.DateOfService || '',
                 });
@@ -2129,7 +2134,8 @@
 
                     const rows = records.map(d => `
                         <tr>
-                            <td style="padding:0.4rem 0.75rem 0.4rem 0;color:var(--text);font-weight:600">${d.client}</td>
+                            <td style="padding:0.4rem 0.75rem 0.4rem 0;color:var(--text);font-weight:600">${d.name}</td>
+                            <td style="padding:0.4rem 0.75rem;color:var(--text-dim);font-size:0.78rem;font-family:'JetBrains Mono',monospace">${d.client}</td>
                             <td style="padding:0.4rem 0.75rem;color:var(--text-dim)">${d.provider}</td>
                             <td style="padding:0.4rem 0;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.78rem">${d.date}</td>
                         </tr>`).join('');
@@ -2146,7 +2152,8 @@
                         <table style="width:100%;border-collapse:collapse;font-size:0.82rem">
                             <thead>
                                 <tr style="border-bottom:1px solid var(--border)">
-                                    <th style="text-align:left;padding-bottom:0.35rem;color:var(--text-dim);font-weight:500;font-size:0.72rem">Client</th>
+                                    <th style="text-align:left;padding-bottom:0.35rem;color:var(--text-dim);font-weight:500;font-size:0.72rem">Client Name</th>
+                                    <th style="text-align:left;padding:0 0.75rem 0.35rem;color:var(--text-dim);font-weight:500;font-size:0.72rem">Client ID</th>
                                     <th style="text-align:left;padding:0 0.75rem 0.35rem;color:var(--text-dim);font-weight:500;font-size:0.72rem">Provider</th>
                                     <th style="text-align:left;padding-bottom:0.35rem;color:var(--text-dim);font-weight:500;font-size:0.72rem">Date</th>
                                 </tr>
