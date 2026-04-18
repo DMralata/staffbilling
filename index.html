@@ -2098,12 +2098,28 @@
                 });
             });
 
-            // Deduplicate by client per week (keep first occurrence)
+            // Each client may only appear in one week — the week of their latest 97151 date.
+            // First, find the latest assessment date per client across all weeks.
+            const latestAssessDate = {};
+            Object.values(detailByWeek).forEach(records => {
+                records.forEach(d => {
+                    const t = new Date(d.date).getTime();
+                    if (!latestAssessDate[d.client] || t > latestAssessDate[d.client]) {
+                        latestAssessDate[d.client] = t;
+                    }
+                });
+            });
+
+            // Keep a record only if its date matches that client's latest date,
+            // and deduplicate within the same week.
             Object.keys(detailByWeek).forEach(w => {
                 const seen = new Set();
                 detailByWeek[w] = detailByWeek[w].filter(d => {
-                    if (seen.has(d.client)) return false;
-                    seen.add(d.client); return true;
+                    const t = new Date(d.date).getTime();
+                    if (t !== latestAssessDate[d.client]) return false; // not the latest week
+                    if (seen.has(d.client)) return false;               // duplicate within week
+                    seen.add(d.client);
+                    return true;
                 });
             });
 
