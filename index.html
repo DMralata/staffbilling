@@ -2057,7 +2057,24 @@
             const TARGET = 2;
             const PROC   = '97151';
 
+            // Build a set of clients who had ANY 97153 billing before a given date
+            // clientId → earliest 97153 date (as ms timestamp)
+            const first97153Date = {};
+            allData.forEach(r => {
+                if (r.ProcedureCode !== '97153') return;
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                const cid = r.ClientId;
+                if (!cid) return;
+                const d = new Date(r.DateOfService);
+                if (isNaN(d)) return;
+                if (!(cid in first97153Date) || d < first97153Date[cid]) {
+                    first97153Date[cid] = d;
+                }
+            });
+
             // Build per-week map: week → [ { client, provider, date } ]
+            // Only include a 97151 if the client had NO 97153 billing prior to this assessment date
             const detailByWeek = {};
             sortedWeeks.forEach(w => detailByWeek[w] = []);
             allData.forEach(r => {
@@ -2066,7 +2083,10 @@
                 if (isNaN(ag) || ag <= 0) return;
                 const week = getWeekNumber(r.DateOfService);
                 if (!week || !(week in detailByWeek)) return;
-                const cid      = r.ClientId || '—';
+                const cid = r.ClientId || '—';
+                // Exclude if client had 97153 billed before this assessment date
+                const assessDate = new Date(r.DateOfService);
+                if (!isNaN(assessDate) && first97153Date[cid] && first97153Date[cid] < assessDate) return;
                 const cfirst   = r.ClientFirstName || '';
                 const clast    = r.ClientLastName  || '';
                 const fullName = [cfirst, clast].filter(Boolean).join(' ') || cid;
