@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Billing Performance Dashboard - All Codes</title>
+    <title>Staff Billing Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap');
-        
+
         :root {
             --primary: #0a4d68;
             --secondary: #088395;
@@ -18,724 +19,1305 @@
             --text: #c9d1d9;
             --text-dim: #8b949e;
             --border: #30363d;
-            --target: 25;
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
             font-family: 'Outfit', sans-serif;
             background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
             color: var(--text);
             min-height: 100vh;
-            padding: 2rem;
             position: relative;
             overflow-x: hidden;
         }
-        
+
         body::before {
             content: '';
             position: fixed;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(8, 131, 149, 0.03) 1px, transparent 1px);
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(8,131,149,0.03) 1px, transparent 1px);
             background-size: 30px 30px;
             pointer-events: none;
             animation: grid-drift 60s linear infinite;
+            z-index: 0;
         }
-        
+
         @keyframes grid-drift {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(30px, 30px); }
+            0%   { transform: translate(0,0); }
+            100% { transform: translate(30px,30px); }
         }
-        
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
+
+        /* ─── SELECTION SCREEN ──────────────────────────────────── */
+        #selectionScreen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
             position: relative;
             z-index: 1;
         }
-        
-        header {
-            margin-bottom: 3rem;
-            animation: slide-down 0.6s ease-out;
+
+        .selection-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 3rem 2.5rem;
+            max-width: 460px;
+            width: 100%;
+            text-align: center;
+            animation: slide-up 0.6s ease-out;
         }
-        
-        @keyframes slide-down {
-            from { opacity: 0; transform: translateY(-30px); }
-            to { opacity: 1; transform: translateY(0); }
+
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(40px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        
-        h1 {
+
+        .selection-card h1 {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 2.5rem;
+            font-size: 1.85rem;
             font-weight: 700;
             background: linear-gradient(135deg, var(--accent), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
+            margin-bottom: 0.4rem;
         }
-        
-        .subtitle {
-            font-size: 1rem;
+
+        .selection-card .subtitle {
+            font-size: 0.85rem;
             color: var(--text-dim);
             font-family: 'JetBrains Mono', monospace;
-            font-weight: 400;
+            margin-bottom: 2.5rem;
         }
-        
-        .loading {
-            text-align: center;
-            padding: 4rem;
+
+        .select-label {
+            display: block;
+            text-align: left;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 0.5rem;
+        }
+
+        .employee-select {
+            width: 100%;
+            padding: 0.85rem 2.5rem 0.85rem 1rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            cursor: pointer;
+            margin-bottom: 1.25rem;
+            transition: border-color 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238b949e' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+        }
+
+        .employee-select:focus { border-color: var(--accent); }
+        .employee-select option { background: var(--bg-dark); color: var(--text); }
+
+        .btn-primary {
+            width: 100%;
+            padding: 0.9rem;
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+            color: #0d1117;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.02em;
+        }
+
+        .btn-primary:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        .loading-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            color: var(--accent);
+            padding: 1rem 0 2rem;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.4; }
+        }
+
+        /* ─── PASSWORD MODAL ────────────────────────────────────── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            max-width: 380px;
+            width: 90%;
+            animation: modal-in 0.25s ease-out;
+        }
+
+        @keyframes modal-in {
+            from { opacity: 0; transform: scale(0.92) translateY(16px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-card h2 {
+            font-family: 'JetBrains Mono', monospace;
             font-size: 1.2rem;
             color: var(--accent);
-            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 0.4rem;
         }
-        
-        .error {
-            background: rgba(255, 107, 107, 0.1);
-            border: 1px solid var(--warning);
-            border-radius: 8px;
-            padding: 2rem;
-            margin: 2rem 0;
-            color: var(--warning);
-        }
-        
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-            animation: fade-in 0.8s ease-out 0.2s both;
-        }
-        
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .kpi-card {
-            background: var(--bg-light);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 1.5rem;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .kpi-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--accent);
-            box-shadow: 0 8px 32px rgba(5, 191, 219, 0.2);
-        }
-        
-        .kpi-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent), var(--secondary));
-            transform: scaleX(0);
-            transform-origin: left;
-            transition: transform 0.3s ease;
-        }
-        
-        .kpi-card:hover::before {
-            transform: scaleX(1);
-        }
-        
-        .provider-name {
+
+        .modal-name {
+            font-size: 1.05rem;
             font-weight: 600;
-            font-size: 1.1rem;
+            color: var(--text);
+            margin-bottom: 1.75rem;
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            outline: none;
+            margin-bottom: 0.75rem;
+            transition: border-color 0.2s;
+        }
+
+        .password-input:focus { border-color: var(--accent); }
+
+        .password-input.shake {
+            border-color: var(--warning);
+            animation: shake 0.35s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%       { transform: translateX(-8px); }
+            40%       { transform: translateX(8px); }
+            60%       { transform: translateX(-6px); }
+            80%       { transform: translateX(6px); }
+        }
+
+        .modal-error {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--warning);
             margin-bottom: 1rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .modal-error.show { opacity: 1; }
+
+        .modal-buttons { display: flex; gap: 0.75rem; }
+
+        .btn-ghost {
+            flex: 1;
+            padding: 0.8rem;
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+
+        /* ─── SHARED DASHBOARD CHROME ───────────────────────────── */
+        .dash-view {
+            display: none;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+            animation: fade-in 0.5s ease-out;
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .dash-container { max-width: 1400px; margin: 0 auto; }
+
+        .dash-header {
             display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
             flex-wrap: wrap;
         }
-        
-        .status-badge {
+
+        .dash-header-left h1 {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        .status-below {
-            background: rgba(255, 107, 107, 0.2);
-            color: var(--warning);
-            border: 1px solid var(--warning);
-        }
-        
-        .status-meeting {
-            background: rgba(81, 207, 102, 0.2);
-            color: var(--success);
-            border: 1px solid var(--success);
-        }
-        
-        .hours-display {
-            display: flex;
-            align-items: baseline;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .hours-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 3rem;
+            font-size: 2.2rem;
             font-weight: 700;
-            line-height: 1;
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+            margin-bottom: 0.3rem;
         }
-        
-        .hours-label {
-            font-size: 0.9rem;
-            color: var(--text-dim);
-            font-weight: 300;
-        }
-        
-        .progress-bar-container {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-        }
-        
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), var(--secondary));
-            border-radius: 4px;
-            transition: width 1s ease-out;
-            position: relative;
-        }
-        
-        .progress-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            animation: shimmer 2s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        
-        .target-info {
-            font-size: 0.85rem;
-            color: var(--text-dim);
+
+        .dash-subtitle {
             font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
         }
-        
-        .client-count {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-            color: var(--text);
-        }
-        
-        .client-count-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            font-size: 1.1rem;
+
+        .btn-back {
+            padding: 0.65rem 1.2rem;
+            background: transparent;
             color: var(--accent);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
-        
-        .client-count-label {
-            color: var(--text-dim);
-            font-size: 0.85rem;
-        }
-        
-        .heatmap-section {
-            background: var(--bg-light);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2rem;
-            animation: fade-in 0.8s ease-out 0.4s both;
-        }
-        
+
+        .btn-back:hover { background: rgba(5,191,219,0.1); }
+
+        /* ─── SECTION CHROME ────────────────────────────────────── */
         .section-title {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.3rem;
+            font-size: 1.05rem;
             font-weight: 600;
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
             gap: 0.75rem;
+            color: var(--text);
         }
-        
+
         .section-title::before {
             content: '';
-            width: 4px;
-            height: 24px;
+            width: 4px; height: 20px;
             background: linear-gradient(180deg, var(--accent), var(--secondary));
             border-radius: 2px;
+            flex-shrink: 0;
         }
-        
-        .heatmap-container {
-            overflow-x: auto;
-            margin-top: 1.5rem;
+
+        /* ─── SUMMARY STATS ROW (ALL view) ──────────────────────── */
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
         }
-        
-        .heatmap-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 4px;
-            font-family: 'JetBrains Mono', monospace;
+
+        .stat-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.4rem 1.5rem;
+            position: relative;
+            overflow: hidden;
         }
-        
-        .heatmap-table th {
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--secondary));
+        }
+
+        .stat-label {
             font-size: 0.75rem;
-            font-weight: 600;
-            padding: 0.75rem 0.5rem;
-            text-align: center;
             color: var(--text-dim);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 6px;
-        }
-        
-        .heatmap-table td {
-            padding: 1rem;
-            text-align: center;
-            font-size: 0.9rem;
+            letter-spacing: 0.07em;
             font-weight: 600;
-            border-radius: 8px;
-            position: relative;
-            transition: all 0.2s ease;
-            background: rgba(255, 255, 255, 0.02);
+            margin-bottom: 0.5rem;
         }
-        
-        .heatmap-table td:hover {
-            transform: scale(1.05);
-            z-index: 10;
-            box-shadow: 0 4px 16px rgba(5, 191, 219, 0.3);
-        }
-        
-        .heatmap-table .provider-cell {
-            text-align: left;
-            font-weight: 600;
-            color: var(--text);
-            background: rgba(255, 255, 255, 0.03);
-        }
-        
-        .heat-0 { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-        .heat-1 { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
-        .heat-2 { background: rgba(251, 191, 36, 0.4); color: #f59e0b; }
-        .heat-3 { background: rgba(251, 191, 36, 0.6); color: #f59e0b; }
-        .heat-4 { background: rgba(34, 197, 94, 0.5); color: #22c55e; }
-        .heat-5 { background: rgba(34, 197, 94, 0.7); color: white; font-weight: 700; }
-        .heat-target { 
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.8), rgba(22, 163, 74, 1)); 
-            color: white;
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.4rem;
             font-weight: 700;
-            border: 2px solid #16a34a;
+            line-height: 1;
         }
-        
-        .legend {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            margin-top: 2rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 8px;
-            font-size: 0.85rem;
-            flex-wrap: wrap;
+
+        .stat-sub {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 0.3rem;
         }
-        
-        .legend-item {
+
+        /* ─── KPI GRID (ALL view) ───────────────────────────────── */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.4rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 24px rgba(5,191,219,0.15);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--secondary));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s;
+        }
+
+        .kpi-card:hover::before { transform: scaleX(1); }
+
+        .kpi-provider-name {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 0.85rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            flex-wrap: wrap;
         }
-        
-        .legend-box {
-            width: 40px;
-            height: 24px;
-            border-radius: 4px;
-        }
-        
-        .summary-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--border);
-        }
-        
-        .stat-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-        
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-dim);
+
+        .status-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            padding: 0.25rem 0.55rem;
+            border-radius: 5px;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            font-weight: 600;
+            display: inline-block;
         }
-        
-        .stat-value {
+
+        .status-below   { background: rgba(255,107,107,0.15); color: var(--warning); border: 1px solid var(--warning); }
+        .status-meeting { background: rgba(81,207,102,0.15);  color: var(--success); border: 1px solid var(--success); }
+
+        .kpi-hours-display {
+            display: flex;
+            align-items: baseline;
+            gap: 0.4rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .kpi-hours-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.5rem;
+            font-size: 2.8rem;
             font-weight: 700;
+            line-height: 1;
+        }
+
+        .kpi-hours-label {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .kpi-client-row {
+            margin-top: 0.85rem;
+            padding-top: 0.85rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .kpi-client-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1rem;
             color: var(--accent);
         }
-        
+
+        /* ─── INDIVIDUAL METRICS ROW ────────────────────────────── */
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .metric-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--secondary));
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
+        }
+
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.6rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+
+        .metric-sub { font-size: 0.82rem; color: var(--text-dim); }
+
+        /* progress bar */
+        .progress-bar-container {
+            width: 100%; height: 7px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0.85rem 0 0.4rem;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* ─── CHART ─────────────────────────────────────────────── */
+        .chart-section {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-wrapper { position: relative; height: 280px; }
+
+        /* ─── HEATMAP ───────────────────────────────────────────── */
+        .heatmap-section {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .heatmap-scroll { overflow-x: auto; margin-top: 0.5rem; }
+
+        .heatmap-table {
+            border-collapse: separate;
+            border-spacing: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            min-width: 100%;
+        }
+
+        .heatmap-table th {
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 0.6rem 0.4rem;
+            text-align: center;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            background: rgba(255,255,255,0.02);
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .heatmap-table td {
+            padding: 0.85rem 0.6rem;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 6px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .heatmap-table td:hover { transform: scale(1.06); z-index: 10; position: relative; }
+
+        .heat-empty  { background: rgba(255,255,255,0.02); color: var(--text-dim); }
+        .heat-0      { background: rgba(239,68,68,0.1);    color: #ef4444; }
+        .heat-1      { background: rgba(239,68,68,0.3);    color: #ef4444; }
+        .heat-2      { background: rgba(251,191,36,0.35);  color: #f59e0b; }
+        .heat-3      { background: rgba(251,191,36,0.55);  color: #f59e0b; }
+        .heat-4      { background: rgba(34,197,94,0.45);   color: #22c55e; }
+        .heat-target { background: linear-gradient(135deg, rgba(34,197,94,0.85), rgba(22,163,74,1)); color: white; font-weight: 700; border: 2px solid #16a34a; }
+
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255,255,255,0.02);
+            border-radius: 8px;
+            font-size: 0.78rem;
+            flex-wrap: wrap;
+            color: var(--text-dim);
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+        .legend-box  { width: 30px; height: 18px; border-radius: 4px; }
+
+        /* ─── ERROR ─────────────────────────────────────────────── */
+        .error-msg {
+            background: rgba(255,107,107,0.08);
+            border: 1px solid var(--warning);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            color: var(--warning);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        /* ─── RESPONSIVE ────────────────────────────────────────── */
         @media (max-width: 768px) {
-            body { padding: 1rem; }
-            h1 { font-size: 1.8rem; }
-            .kpi-grid { grid-template-columns: 1fr; }
+            .dash-view { padding: 1rem; }
+            .dash-header-left h1 { font-size: 1.6rem; }
+            .metric-value { font-size: 2rem; }
+            .chart-wrapper { height: 220px; }
+            .kpi-hours-value { font-size: 2.2rem; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Staff Billing Dashboard</h1>
-            <div class="subtitle">All Procedure Codes · Last 4 Weeks Performance · Live Data</div>
-        </header>
-        
-        <div class="loading" id="loading">Loading data from Google Sheets...</div>
-        <div class="error" id="error" style="display: none;"></div>
-        
-        <div class="kpi-grid" id="kpiGrid" style="display: none;"></div>
-        
-        <div class="heatmap-section" id="heatmapSection" style="display: none;">
-            <div class="section-title">Weekly Hours Heatmap</div>
-            <div class="heatmap-container">
-                <table class="heatmap-table" id="heatmapTable"></table>
+
+    <!-- ═══ SELECTION SCREEN ════════════════════════════════════ -->
+    <div id="selectionScreen">
+        <div class="selection-card">
+            <h1>Staff Billing<br>Dashboard</h1>
+            <div class="subtitle">All Procedure Codes · Live Data</div>
+
+            <div id="selectionLoading" class="loading-text">Loading…</div>
+
+            <div id="selectionContent" style="display:none">
+                <label class="select-label" for="employeeSelect">Select Your Name</label>
+                <select class="employee-select" id="employeeSelect">
+                    <option value="">— choose name —</option>
+                </select>
+                <button class="btn-primary" id="viewDashboardBtn" disabled>View Dashboard</button>
+                <div id="selectionError" class="error-msg" style="display:none"></div>
             </div>
-            
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="legend-box heat-0"></div>
-                    <span>0-5 hrs (Poor)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-box heat-1"></div>
-                    <span>5-10 hrs (Low)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-box heat-2"></div>
-                    <span>10-15 hrs (Fair)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-box heat-3"></div>
-                    <span>15-20 hrs (Good)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-box heat-4"></div>
-                    <span>20-25 hrs (Very Good)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-box heat-target"></div>
-                    <span>25+ hrs (Target Met)</span>
-                </div>
-            </div>
-            
-            <div class="summary-stats" id="summaryStats"></div>
         </div>
     </div>
-    
+
+    <!-- ═══ PASSWORD MODAL ══════════════════════════════════════ -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal-card">
+            <h2>🔒 Enter Password</h2>
+            <div class="modal-name" id="modalEmployeeName"></div>
+            <input
+                type="password"
+                class="password-input"
+                id="passwordInput"
+                placeholder="Your password"
+                autocomplete="current-password"
+            >
+            <div class="modal-error" id="modalError">Incorrect password — please try again.</div>
+            <div class="modal-buttons">
+                <button class="btn-ghost" id="cancelPasswordBtn">Cancel</button>
+                <button class="btn-primary" id="submitPasswordBtn" style="flex:2">Unlock →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ ALL / TEAM DASHBOARD ════════════════════════════════ -->
+    <div class="dash-view" id="allDashboard">
+        <div class="dash-container">
+
+            <div class="dash-header">
+                <div class="dash-header-left">
+                    <h1>Full Team Dashboard</h1>
+                    <div class="dash-subtitle">All Staff · All Procedure Codes · Last 4 Weeks Performance</div>
+                </div>
+                <button class="btn-back" id="allBackBtn">← Switch View</button>
+            </div>
+
+            <!-- Summary row -->
+            <div class="summary-stats" id="teamSummaryStats"></div>
+
+            <!-- All-staff KPI cards -->
+            <div class="section-title" style="margin-bottom:1.25rem">Individual Performance</div>
+            <div class="kpi-grid" id="teamKpiGrid"></div>
+
+            <!-- Full heatmap -->
+            <div class="heatmap-section">
+                <div class="section-title">Team Weekly Hours Heatmap</div>
+                <div class="heatmap-scroll">
+                    <table class="heatmap-table" id="teamHeatmapTable"></table>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-box heat-0"></div><span>0–5 hrs</span></div>
+                    <div class="legend-item"><div class="legend-box heat-1"></div><span>5–10 hrs</span></div>
+                    <div class="legend-item"><div class="legend-box heat-2"></div><span>10–15 hrs</span></div>
+                    <div class="legend-item"><div class="legend-box heat-3"></div><span>15–20 hrs</span></div>
+                    <div class="legend-item"><div class="legend-box heat-4"></div><span>20–25 hrs</span></div>
+                    <div class="legend-item"><div class="legend-box heat-target" style="border:2px solid #16a34a"></div><span>25+ hrs (Target Met)</span></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ═══ INDIVIDUAL DASHBOARD ════════════════════════════════ -->
+    <div class="dash-view" id="individualDashboard">
+        <div class="dash-container" style="max-width:1200px">
+
+            <div class="dash-header">
+                <div class="dash-header-left">
+                    <h1 id="dashProviderName"></h1>
+                    <div class="dash-subtitle">All Procedure Codes · Last 4 Weeks Performance</div>
+                </div>
+                <button class="btn-back" id="backBtn">← Switch Employee</button>
+            </div>
+
+            <div class="metrics-row" id="metricsRow"></div>
+
+            <div class="chart-section">
+                <div class="section-title">Weekly Hours Trend</div>
+                <div class="chart-wrapper">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="heatmap-section">
+                <div class="section-title">Week-by-Week Breakdown</div>
+                <div class="heatmap-scroll">
+                    <table class="heatmap-table" id="heatmapTable"></table>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><div class="legend-box heat-0"></div><span>0–5 hrs</span></div>
+                    <div class="legend-item"><div class="legend-box heat-1"></div><span>5–10 hrs</span></div>
+                    <div class="legend-item"><div class="legend-box heat-2"></div><span>10–15 hrs</span></div>
+                    <div class="legend-item"><div class="legend-box heat-3"></div><span>15–20 hrs</span></div>
+                    <div class="legend-item"><div class="legend-box heat-4"></div><span>20–25 hrs</span></div>
+                    <div class="legend-item"><div class="legend-box heat-target" style="border:2px solid #16a34a"></div><span>25+ hrs (Target Met)</span></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
     <script>
-        const SHEET_ID = '1IwjOdgUG-gHzaQdfwxyUtIcpkDFyFKBylfHhVJvtTe0';
-        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
-        
-        async function fetchGoogleSheetData() {
-            const response = await fetch(SHEET_URL);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return await response.text();
-        }
-        
+        /* ── CONFIG ────────────────────────────────────────────── */
+        const SHEET_ID   = '1IwjOdgUG-gHzaQdfwxyUtIcpkDFyFKBylfHhVJvtTe0';
+        const MAIN_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+        const PASS_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Passwords`;
+        const TARGET_HRS = 25;
+        const ALL_KEY    = 'ALL';
+
+        /* ── STATE ─────────────────────────────────────────────── */
+        let allData      = [];
+        let passwordMap  = {};
+        let providerData = {};
+        let sortedWeeks  = [];
+        let last4Weeks   = [];
+        let latestWeek   = '';
+        let trendChart   = null;
+
+        /* ── CSV PARSING ───────────────────────────────────────── */
         function parseCSV(csv) {
             const lines = csv.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
-            
+            if (lines.length < 2) return [];
+            const headers = splitLine(lines[0]).map(h => h.replace(/"/g,'').trim());
             return lines.slice(1).map(line => {
-                const values = [];
-                let current = '';
-                let inQuotes = false;
-                
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
-                        values.push(current.trim());
-                        current = '';
-                    } else {
-                        current += char;
-                    }
-                }
-                values.push(current.trim());
-                
-                return headers.reduce((obj, header, i) => {
-                    obj[header] = values[i] ? values[i].replace(/"/g, '') : '';
-                    return obj;
+                const vals = splitLine(line);
+                return headers.reduce((o, h, i) => {
+                    o[h] = (vals[i] || '').replace(/"/g,'').trim();
+                    return o;
                 }, {});
             });
         }
 
-        function getWeekNumber(date) {
-            const d = new Date(date);
-            d.setHours(0, 0, 0, 0);
-            d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-            const yearStart = new Date(d.getFullYear(), 0, 1);
-            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-            return `${d.getFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+        function splitLine(line) {
+            const out = []; let cur = '', inQ = false;
+            for (const ch of line) {
+                if (ch === '"')            { inQ = !inQ; }
+                else if (ch === ',' && !inQ) { out.push(cur); cur = ''; }
+                else                       { cur += ch; }
+            }
+            out.push(cur);
+            return out;
         }
 
+        function getWeekNumber(dateStr) {
+            const d = new Date(dateStr);
+            if (isNaN(d)) return null;
+            d.setHours(0,0,0,0);
+            d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+            const y = new Date(d.getFullYear(), 0, 1);
+            return `${d.getFullYear()}-W${String(Math.ceil((((d-y)/86400000)+1)/7)).padStart(2,'0')}`;
+        }
+
+        /* ── DATA PROCESSING ───────────────────────────────────── */
         function processData(data) {
-            // Step 1: identify providers who have billed 97155 with agreed charges > 0
-            const qualified97155Providers = new Set(
+            const qualified = new Set(
                 data
-                    .filter(row => {
-                        const agreedCharges = parseFloat(row.ClientAgreedCharges);
-                        return row.ProcedureCode === '97155' && !isNaN(agreedCharges) && agreedCharges > 0;
-                    })
-                    .map(row => `${row.ProviderFirstName} ${row.ProviderLastName}`)
+                    .filter(r => r.ProcedureCode === '97155' && parseFloat(r.ClientAgreedCharges) > 0)
+                    .map(r => `${r.ProviderFirstName} ${r.ProviderLastName}`)
             );
+            const EXCLUDED = new Set(['Nicole Dutton', 'Anna Morgan']);
+            const result = {};
 
-            const providers = {};
-            
-            // Step 2: include all agreed-charge hours for those providers across all codes
             data.forEach(row => {
-                const agreedCharges = parseFloat(row.ClientAgreedCharges);
-                if (isNaN(agreedCharges) || agreedCharges <= 0) return;
-
-                const provider = `${row.ProviderFirstName} ${row.ProviderLastName}`;
-
-                // Only include providers who have billed 97155
-                if (!qualified97155Providers.has(provider)) return;
-
-                if (provider === 'Nicole Dutton' || provider === 'Anna Morgan') return;
-                
-                const hours = parseFloat(row.TimeWorkedInHours);
-                if (isNaN(hours)) return;
-                
+                const ag = parseFloat(row.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                const p = `${row.ProviderFirstName} ${row.ProviderLastName}`;
+                if (!qualified.has(p) || EXCLUDED.has(p)) return;
+                const hrs = parseFloat(row.TimeWorkedInHours);
+                if (isNaN(hrs)) return;
                 const week = getWeekNumber(row.DateOfService);
                 if (!week) return;
-                
-                if (!providers[provider]) providers[provider] = {};
-                if (!providers[provider][week]) providers[provider][week] = 0;
-                
-                providers[provider][week] += hours;
+                if (!result[p]) result[p] = {};
+                result[p][week] = (result[p][week] || 0) + hrs;
             });
-            
-            return providers;
+
+            return result;
         }
 
-        function getLast4Weeks(weeks) {
-            return weeks.sort().slice(-4);
-        }
-        
-        function getLatestWeek(weeks) {
-            return weeks.sort()[weeks.length - 1];
-        }
-        
-        function calculateUniqueClients(data, provider, latestWeek) {
-            const latestWeekData = data.filter(row => {
-                const rowProvider = `${row.ProviderFirstName} ${row.ProviderLastName}`;
-                const week = getWeekNumber(row.DateOfService);
-                const agreedCharges = parseFloat(row.ClientAgreedCharges);
-                return rowProvider === provider && week === latestWeek && !isNaN(agreedCharges) && agreedCharges > 0;
-            });
-            
-            const uniqueClients = new Set(latestWeekData.map(row => row.ClientId).filter(id => id));
-            return uniqueClients.size;
+        function calcAvg(weeks, targetWeeks) {
+            let total = 0, cnt = 0;
+            targetWeeks.forEach(w => { if (weeks[w]) { total += weeks[w]; cnt++; } });
+            return cnt > 0 ? total / cnt : 0;
         }
 
-        function calculateAverage(providerWeeks, last4Weeks) {
-            let total = 0;
-            let count = 0;
-            last4Weeks.forEach(week => {
-                if (providerWeeks[week]) {
-                    total += providerWeeks[week];
-                    count++;
-                }
-            });
-            return count > 0 ? total / count : 0;
+        function calcClients(provider, week) {
+            return new Set(
+                allData
+                    .filter(r => {
+                        return `${r.ProviderFirstName} ${r.ProviderLastName}` === provider
+                            && getWeekNumber(r.DateOfService) === week
+                            && parseFloat(r.ClientAgreedCharges) > 0;
+                    })
+                    .map(r => r.ClientId).filter(Boolean)
+            ).size;
         }
 
-        function getHeatClass(hours) {
-            if (hours === 0) return 'heat-0';
-            if (hours >= 25) return 'heat-target';
-            if (hours >= 20) return 'heat-4';
-            if (hours >= 15) return 'heat-3';
-            if (hours >= 10) return 'heat-2';
-            if (hours >= 5) return 'heat-1';
+        function heatClass(hrs) {
+            if (hrs === 0)          return 'heat-empty';
+            if (hrs >= TARGET_HRS)  return 'heat-target';
+            if (hrs >= 20)          return 'heat-4';
+            if (hrs >= 15)          return 'heat-3';
+            if (hrs >= 10)          return 'heat-2';
+            if (hrs >= 5)           return 'heat-1';
             return 'heat-0';
         }
 
-        async function renderDashboard() {
-            try {
-                const csvData = await fetchGoogleSheetData();
-                const parsedData = parseCSV(csvData);
-                
-                if (parsedData.length === 0) throw new Error('No data found in Google Sheet');
-                
-                const providers = processData(parsedData);
-                
-                const allWeeks = new Set();
-                Object.values(providers).forEach(provider => {
-                    Object.keys(provider).forEach(week => allWeeks.add(week));
-                });
-                
-                const sortedWeeks = Array.from(allWeeks).sort();
-                const last4Weeks = getLast4Weeks(sortedWeeks);
-                const latestWeek = getLatestWeek(sortedWeeks);
-                
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('kpiGrid').style.display = 'grid';
-                document.getElementById('heatmapSection').style.display = 'block';
-                
-                const kpiGrid = document.getElementById('kpiGrid');
-                const providerAverages = [];
-                
-                Object.entries(providers).forEach(([name, weeks], idx) => {
-                    const avg = calculateAverage(weeks, last4Weeks);
-                    const clientCount = calculateUniqueClients(parsedData, name, latestWeek);
-                    providerAverages.push({ name, avg, weeks, clientCount });
-                    
-                    const isMeetingTarget = avg >= 25;
-                    const percentage = Math.min((avg / 25) * 100, 100);
-                    
-                    const card = document.createElement('div');
-                    card.className = 'kpi-card';
-                    card.style.animationDelay = `${idx * 0.1}s`;
-                    
-                    card.innerHTML = `
-                        <div class="provider-name">
-                            ${name}
-                            <span class="status-badge ${isMeetingTarget ? 'status-meeting' : 'status-below'}">
-                                ${isMeetingTarget ? '✓ Target Met' : '✗ Below Target'}
-                            </span>
-                        </div>
-                        <div class="hours-display">
-                            <div class="hours-value">${avg.toFixed(1)}</div>
-                            <div class="hours-label">hrs/week avg</div>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" style="width: ${percentage}%"></div>
-                        </div>
-                        <div class="target-info">Target: 25.0 hrs/week</div>
-                        <div class="client-count">
-                            <span class="client-count-value">${clientCount}</span>
-                            <span class="client-count-label">clients (latest week)</span>
-                        </div>
-                    `;
-                    
-                    kpiGrid.appendChild(card);
-                });
-                
-                // Heatmap
-                const table = document.getElementById('heatmapTable');
-                
-                const headerRow = document.createElement('tr');
-                headerRow.innerHTML = '<th>Provider</th>';
-                sortedWeeks.forEach(week => {
-                    const th = document.createElement('th');
-                    th.textContent = week;
-                    if (last4Weeks.includes(week)) {
-                        th.style.background = 'rgba(5, 191, 219, 0.1)';
-                        th.style.color = 'var(--accent)';
-                    }
-                    headerRow.appendChild(th);
-                });
-                table.appendChild(headerRow);
-                
-                Object.entries(providers).forEach(([name, weeks]) => {
-                    const row = document.createElement('tr');
-                    
-                    const nameCell = document.createElement('td');
-                    nameCell.className = 'provider-cell';
-                    nameCell.textContent = name;
-                    row.appendChild(nameCell);
-                    
-                    sortedWeeks.forEach(week => {
-                        const cell = document.createElement('td');
-                        const hours = weeks[week] || 0;
-                        cell.className = getHeatClass(hours);
-                        cell.textContent = hours > 0 ? hours.toFixed(1) : '—';
-                        row.appendChild(cell);
-                    });
-                    
-                    table.appendChild(row);
-                });
-                
-                // Summary stats
-                const summaryStats = document.getElementById('summaryStats');
-                const avgOfAverages = providerAverages.reduce((sum, p) => sum + p.avg, 0) / providerAverages.length;
-                const meetingTarget = providerAverages.filter(p => p.avg >= 25).length;
-                const belowTarget = providerAverages.filter(p => p.avg < 25).length;
-                const highest = providerAverages.reduce((max, p) => p.avg > max.avg ? p : max);
-                
-                summaryStats.innerHTML = `
-                    <div class="stat-item">
-                        <div class="stat-label">Team Average</div>
-                        <div class="stat-value">${avgOfAverages.toFixed(1)} hrs</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Meeting Target</div>
-                        <div class="stat-value" style="color: var(--success)">${meetingTarget}</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Below Target</div>
-                        <div class="stat-value" style="color: var(--warning)">${belowTarget}</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Top Performer</div>
-                        <div class="stat-value" style="font-size: 1rem;">${highest.name.split(' ')[0]}</div>
-                    </div>
-                `;
-                
-            } catch (error) {
-                console.error('Error rendering dashboard:', error);
-                document.getElementById('loading').style.display = 'none';
-                const errorDiv = document.getElementById('error');
-                errorDiv.style.display = 'block';
-                errorDiv.innerHTML = `
-                    <h3>Error Loading Data</h3>
-                    <p>Could not load data from Google Sheets. Please ensure:</p>
-                    <ul>
-                        <li>The Google Sheet is set to "Anyone with the link can view"</li>
-                        <li>The sheet contains the correct columns (DateOfService, ProviderFirstName, ProviderLastName, TimeWorkedInHours, ClientId)</li>
-                        <li>Your internet connection is working</li>
-                    </ul>
-                    <p style="margin-top: 1rem; font-family: monospace; font-size: 0.9rem;">Error: ${error.message}</p>
-                `;
+        /* ── SCREEN MANAGEMENT ─────────────────────────────────── */
+        function hideAll() {
+            document.getElementById('selectionScreen').style.display    = 'none';
+            document.getElementById('allDashboard').style.display       = 'none';
+            document.getElementById('individualDashboard').style.display = 'none';
+        }
+
+        function showSelectionScreen() {
+            hideAll();
+            document.getElementById('selectionScreen').style.display = 'flex';
+
+            const select = document.getElementById('employeeSelect');
+            select.innerHTML = '<option value="">— choose name —</option>';
+
+            // ALL option at top, visually distinct
+            const allOpt = document.createElement('option');
+            allOpt.value = ALL_KEY;
+            allOpt.textContent = '👥 ALL — Full Team View';
+            select.appendChild(allOpt);
+
+            // Separator
+            const sep = document.createElement('option');
+            sep.disabled = true;
+            sep.textContent = '──────────────────────';
+            select.appendChild(sep);
+
+            // Individual employees
+            Object.keys(providerData).sort().forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                select.appendChild(opt);
+            });
+
+            document.getElementById('selectionLoading').style.display = 'none';
+            document.getElementById('selectionContent').style.display = 'block';
+            document.getElementById('viewDashboardBtn').disabled = true;
+            select.value = '';
+        }
+
+        /* ── PASSWORD MODAL ────────────────────────────────────── */
+        function showPasswordModal(name) {
+            const displayName = name === ALL_KEY ? '👥 Full Team View' : name;
+            document.getElementById('modalEmployeeName').textContent = displayName;
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordInput').classList.remove('shake');
+            document.getElementById('modalError').classList.remove('show');
+            document.getElementById('passwordModal').classList.add('active');
+            // store the real key for unlock
+            document.getElementById('passwordModal').dataset.key = name;
+            setTimeout(() => document.getElementById('passwordInput').focus(), 120);
+        }
+
+        function hidePasswordModal() {
+            document.getElementById('passwordModal').classList.remove('active');
+        }
+
+        function attemptUnlock() {
+            const key     = document.getElementById('passwordModal').dataset.key;
+            const entered = document.getElementById('passwordInput').value;
+            const correct = passwordMap[key];
+
+            if (!correct || entered === correct) {
+                hidePasswordModal();
+                key === ALL_KEY ? renderAllDashboard() : renderIndividualDashboard(key);
+            } else {
+                const input = document.getElementById('passwordInput');
+                input.classList.remove('shake');
+                void input.offsetWidth;
+                input.classList.add('shake');
+                document.getElementById('modalError').classList.add('show');
+                input.value = '';
+                input.focus();
             }
         }
 
-        renderDashboard();
+        /* ── ALL / TEAM DASHBOARD ──────────────────────────────── */
+        function renderAllDashboard() {
+            hideAll();
+            document.getElementById('allDashboard').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            const providers   = Object.entries(providerData);
+            const provStats   = providers.map(([name, weeks]) => ({
+                name,
+                avg: calcAvg(weeks, last4Weeks),
+                clients: calcClients(name, latestWeek),
+                weeks,
+            }));
+
+            /* ── Summary stats ── */
+            const teamAvg    = provStats.reduce((s,p) => s + p.avg, 0) / provStats.length;
+            const onTarget   = provStats.filter(p => p.avg >= TARGET_HRS).length;
+            const below      = provStats.filter(p => p.avg < TARGET_HRS).length;
+            const top        = provStats.reduce((a, b) => a.avg > b.avg ? a : b);
+
+            document.getElementById('teamSummaryStats').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Team Average</div>
+                    <div class="stat-value" style="color:var(--accent)">${teamAvg.toFixed(1)}</div>
+                    <div class="stat-sub">hrs / week</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Meeting Target</div>
+                    <div class="stat-value" style="color:var(--success)">${onTarget}</div>
+                    <div class="stat-sub">of ${provStats.length} staff</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Below Target</div>
+                    <div class="stat-value" style="color:var(--warning)">${below}</div>
+                    <div class="stat-sub">of ${provStats.length} staff</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Top Performer</div>
+                    <div class="stat-value" style="font-size:1.3rem; margin-top:0.3rem">${top.name.split(' ')[0]}</div>
+                    <div class="stat-sub">${top.avg.toFixed(1)} hrs avg</div>
+                </div>
+            `;
+
+            /* ── KPI cards ── */
+            const grid = document.getElementById('teamKpiGrid');
+            grid.innerHTML = '';
+            provStats.sort((a,b) => b.avg - a.avg).forEach(({ name, avg, clients }) => {
+                const on  = avg >= TARGET_HRS;
+                const pct = Math.min((avg / TARGET_HRS) * 100, 100);
+                const bar = on
+                    ? 'linear-gradient(90deg,var(--success),#16a34a)'
+                    : 'linear-gradient(90deg,var(--accent),var(--secondary))';
+
+                const card = document.createElement('div');
+                card.className = 'kpi-card';
+                card.innerHTML = `
+                    <div class="kpi-provider-name">
+                        ${name}
+                        <span class="status-badge ${on ? 'status-meeting' : 'status-below'}">
+                            ${on ? '✓ Met' : '✗ Below'}
+                        </span>
+                    </div>
+                    <div class="kpi-hours-display">
+                        <div class="kpi-hours-value" style="color:${on ? 'var(--success)' : 'var(--warning)'}">${avg.toFixed(1)}</div>
+                        <div class="kpi-hours-label">hrs/wk avg</div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width:${pct}%; background:${bar}"></div>
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace">
+                        Target: ${TARGET_HRS} hrs &nbsp;·&nbsp; ${pct.toFixed(0)}%
+                    </div>
+                    <div class="kpi-client-row">
+                        <span class="kpi-client-val">${clients}</span>
+                        <span>clients this week</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            /* ── Full heatmap ── */
+            const table = document.getElementById('teamHeatmapTable');
+            table.innerHTML = '';
+
+            const hRow = document.createElement('tr');
+            const thP  = document.createElement('th');
+            thP.textContent = 'Provider';
+            hRow.appendChild(thP);
+            sortedWeeks.forEach(week => {
+                const th = document.createElement('th');
+                th.textContent = week;
+                if (last4Weeks.includes(week)) {
+                    th.style.background = 'rgba(5,191,219,0.12)';
+                    th.style.color = 'var(--accent)';
+                }
+                hRow.appendChild(th);
+            });
+            table.appendChild(hRow);
+
+            Object.entries(providerData)
+                .sort(([a],[b]) => a.localeCompare(b))
+                .forEach(([name, weeks]) => {
+                    const row = document.createElement('tr');
+                    const nc  = document.createElement('td');
+                    nc.textContent = name;
+                    nc.style.cssText = 'font-weight:600;color:var(--text);background:rgba(255,255,255,0.03);text-align:left;padding-left:0.75rem;';
+                    row.appendChild(nc);
+                    sortedWeeks.forEach(week => {
+                        const cell  = document.createElement('td');
+                        const hours = weeks[week] || 0;
+                        cell.className = heatClass(hours);
+                        cell.textContent = hours > 0 ? hours.toFixed(1) : '—';
+                        if (last4Weeks.includes(week) && hours > 0) {
+                            cell.style.outline = '2px solid rgba(5,191,219,0.25)';
+                            cell.style.outlineOffset = '-2px';
+                        }
+                        row.appendChild(cell);
+                    });
+                    table.appendChild(row);
+                });
+        }
+
+        /* ── INDIVIDUAL DASHBOARD ──────────────────────────────── */
+        function renderIndividualDashboard(name) {
+            hideAll();
+            document.getElementById('individualDashboard').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            const weeks   = providerData[name] || {};
+            const avg     = calcAvg(weeks, last4Weeks);
+            const latest  = weeks[latestWeek] || 0;
+            const clients = calcClients(name, latestWeek);
+            const pct     = Math.min((avg / TARGET_HRS) * 100, 100);
+            const on      = avg >= TARGET_HRS;
+            const bar     = on
+                ? 'linear-gradient(90deg,var(--success),#16a34a)'
+                : 'linear-gradient(90deg,var(--accent),var(--secondary))';
+
+            document.getElementById('dashProviderName').textContent = name;
+
+            document.getElementById('metricsRow').innerHTML = `
+                <div class="metric-card">
+                    <div class="metric-label">4-Week Average</div>
+                    <div class="metric-value" style="color:${on ? 'var(--success)' : 'var(--warning)'}">${avg.toFixed(1)}</div>
+                    <div class="metric-sub">hrs / week</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width:${pct}%; background:${bar}"></div>
+                    </div>
+                    <div style="font-size:0.78rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace">
+                        Target: ${TARGET_HRS}.0 hrs &nbsp;·&nbsp; ${pct.toFixed(0)}% achieved
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Latest Week</div>
+                    <div class="metric-value" style="color:var(--accent)">${latest.toFixed(1)}</div>
+                    <div class="metric-sub">${latestWeek}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Active Clients</div>
+                    <div class="metric-value" style="color:var(--accent)">${clients}</div>
+                    <div class="metric-sub">unique clients, latest week</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Status</div>
+                    <div style="margin-top:0.85rem">
+                        <span class="status-badge ${on ? 'status-meeting' : 'status-below'}">
+                            ${on ? '✓ Target Met' : '✗ Below Target'}
+                        </span>
+                    </div>
+                    <div class="metric-sub" style="margin-top:0.75rem">
+                        ${on
+                            ? `+${(avg - TARGET_HRS).toFixed(1)} hrs above target`
+                            : `${(TARGET_HRS - avg).toFixed(1)} hrs below target`}
+                    </div>
+                </div>
+            `;
+
+            renderTrendChart(weeks);
+            renderIndividualHeatmap(name, weeks);
+        }
+
+        function renderTrendChart(weeks) {
+            if (trendChart) { trendChart.destroy(); trendChart = null; }
+
+            const displayWeeks = sortedWeeks.slice(-12);
+            const hoursData    = displayWeeks.map(w => +(weeks[w] || 0).toFixed(2));
+            const barColors    = displayWeeks.map(w => {
+                if (!last4Weeks.includes(w)) return 'rgba(5,191,219,0.25)';
+                return (weeks[w] || 0) >= TARGET_HRS ? 'rgba(81,207,102,0.85)' : 'rgba(5,191,219,0.85)';
+            });
+
+            trendChart = new Chart(
+                document.getElementById('trendChart').getContext('2d'),
+                {
+                    data: {
+                        labels: displayWeeks,
+                        datasets: [
+                            {
+                                type: 'bar',
+                                label: 'Hours',
+                                data: hoursData,
+                                backgroundColor: barColors,
+                                borderRadius: 6,
+                                borderSkipped: false,
+                                order: 2,
+                            },
+                            {
+                                type: 'line',
+                                label: `Target (${TARGET_HRS} hrs)`,
+                                data: displayWeeks.map(() => TARGET_HRS),
+                                borderColor: 'rgba(255,107,107,0.65)',
+                                borderDash: [6,5],
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false,
+                                order: 1,
+                                tension: 0,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: { color:'#8b949e', font:{ family:'JetBrains Mono', size:11 }, boxWidth:16, padding:16 }
+                            },
+                            tooltip: {
+                                backgroundColor:'#161b22', borderColor:'#30363d', borderWidth:1,
+                                titleColor:'#c9d1d9', bodyColor:'#8b949e',
+                                titleFont:{ family:'JetBrains Mono' }, bodyFont:{ family:'JetBrains Mono' },
+                                callbacks: {
+                                    label: ctx => ctx.dataset.type === 'line'
+                                        ? ` Target: ${TARGET_HRS} hrs`
+                                        : ` Hours: ${ctx.raw.toFixed(1)} hrs`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid:  { color:'rgba(255,255,255,0.03)' },
+                                ticks: { color:'#8b949e', font:{ family:'JetBrains Mono', size:10 }, maxRotation:45 }
+                            },
+                            y: {
+                                grid:  { color:'rgba(255,255,255,0.04)' },
+                                ticks: { color:'#8b949e', font:{ family:'JetBrains Mono', size:10 }, callback: v => `${v} hrs` },
+                                beginAtZero: true,
+                                suggestedMax: Math.max(TARGET_HRS + 5, Math.max(...hoursData) + 3),
+                            }
+                        }
+                    }
+                }
+            );
+        }
+
+        function renderIndividualHeatmap(name, weeks) {
+            const table = document.getElementById('heatmapTable');
+            table.innerHTML = '';
+
+            const hRow = document.createElement('tr');
+            const thP  = document.createElement('th');
+            thP.textContent = 'Provider';
+            hRow.appendChild(thP);
+            sortedWeeks.forEach(week => {
+                const th = document.createElement('th');
+                th.textContent = week;
+                if (last4Weeks.includes(week)) {
+                    th.style.background = 'rgba(5,191,219,0.12)';
+                    th.style.color = 'var(--accent)';
+                }
+                hRow.appendChild(th);
+            });
+            table.appendChild(hRow);
+
+            const row = document.createElement('tr');
+            const nc  = document.createElement('td');
+            nc.textContent = name;
+            nc.style.cssText = 'font-weight:600;color:var(--text);background:rgba(255,255,255,0.03);text-align:left;padding-left:0.75rem;';
+            row.appendChild(nc);
+            sortedWeeks.forEach(week => {
+                const cell  = document.createElement('td');
+                const hours = weeks[week] || 0;
+                cell.className = heatClass(hours);
+                cell.textContent = hours > 0 ? hours.toFixed(1) : '—';
+                if (last4Weeks.includes(week) && hours > 0) {
+                    cell.style.outline = '2px solid rgba(5,191,219,0.25)';
+                    cell.style.outlineOffset = '-2px';
+                }
+                row.appendChild(cell);
+            });
+            table.appendChild(row);
+        }
+
+        /* ── EVENTS ────────────────────────────────────────────── */
+        document.getElementById('employeeSelect').addEventListener('change', function () {
+            document.getElementById('viewDashboardBtn').disabled = !this.value;
+        });
+
+        document.getElementById('viewDashboardBtn').addEventListener('click', function () {
+            const val = document.getElementById('employeeSelect').value;
+            if (!val) return;
+            if (passwordMap[val]) {
+                showPasswordModal(val);
+            } else {
+                val === ALL_KEY ? renderAllDashboard() : renderIndividualDashboard(val);
+            }
+        });
+
+        document.getElementById('submitPasswordBtn').addEventListener('click', attemptUnlock);
+
+        document.getElementById('passwordInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') attemptUnlock();
+        });
+
+        document.getElementById('cancelPasswordBtn').addEventListener('click', hidePasswordModal);
+        document.getElementById('backBtn').addEventListener('click', showSelectionScreen);
+        document.getElementById('allBackBtn').addEventListener('click', showSelectionScreen);
+
+        /* ── INIT ──────────────────────────────────────────────── */
+        async function init() {
+            try {
+                const [mainText, passText] = await Promise.all([
+                    fetch(MAIN_URL).then(r => {
+                        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                        return r.text();
+                    }),
+                    fetch(PASS_URL).then(r => r.ok ? r.text() : '').catch(() => '')
+                ]);
+
+                allData = parseCSV(mainText);
+                if (!allData.length) throw new Error('No data found in the main sheet.');
+
+                if (passText) {
+                    parseCSV(passText).forEach(row => {
+                        const n = (row.ProviderName || '').trim();
+                        const p = (row.Password     || '').trim();
+                        if (n && p) passwordMap[n] = p;
+                    });
+                }
+
+                providerData = processData(allData);
+
+                const allWeeks = new Set();
+                Object.values(providerData).forEach(p => Object.keys(p).forEach(w => allWeeks.add(w)));
+                sortedWeeks = Array.from(allWeeks).sort();
+                last4Weeks  = sortedWeeks.slice(-4);
+                latestWeek  = sortedWeeks.at(-1);
+
+                showSelectionScreen();
+
+            } catch (err) {
+                document.getElementById('selectionLoading').style.display = 'none';
+                const c = document.getElementById('selectionContent');
+                c.style.display = 'block';
+                c.innerHTML = `<div class="error-msg"><strong>Could not load data</strong><br><br>${err.message}<br><br>Make sure the sheet is shared as "Anyone with the link can view".</div>`;
+            }
+        }
+
+        init();
     </script>
 </body>
 </html>
