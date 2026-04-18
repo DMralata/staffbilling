@@ -2227,20 +2227,21 @@
                 }
             });
 
-            // Which diagnosed clients have had a 97151 (ABA assessment)?
-            const has97151 = new Set();
+            // Clients who have billed ANY ABA code (97151, 97152, 97153, 97155) with agreed charges
+            const ABA_CODES = new Set(['97151', '97152', '97153', '97155']);
+            const hasABABilling = new Set();
             allData.forEach(r => {
-                if (r.ProcedureCode !== '97151') return;
+                if (!ABA_CODES.has(r.ProcedureCode)) return;
                 const ag = parseFloat(r.ClientAgreedCharges);
-                if (!isNaN(ag) && ag > 0 && r.ClientId) has97151.add(r.ClientId);
+                if (!isNaN(ag) && ag > 0 && r.ClientId) hasABABilling.add(r.ClientId);
             });
 
             // Exclude not-viable clients from pipeline counts
             const viableDiagnosed = [...allDiagnosed.entries()].filter(([cid]) => !notViable.has(cid));
             const totalDiag   = viableDiagnosed.length;
-            const converted   = viableDiagnosed.filter(([cid]) => has97151.has(cid)).length;
+            const converted   = viableDiagnosed.filter(([cid]) => hasABABilling.has(cid)).length;
             const pipeline    = viableDiagnosed
-                .filter(([cid]) => !has97151.has(cid))
+                .filter(([cid]) => !hasABABilling.has(cid))
                 .sort((a, b) => b[1].diagDate - a[1].diagDate);
             const convPct     = totalDiag > 0 ? (converted / totalDiag * 100).toFixed(0) : 0;
             const fmtDate     = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
@@ -2266,7 +2267,7 @@
                         </div>
                         <div class="psych-kpi">
                             <div class="psych-kpi-val" style="color:var(--success)">${converted}</div>
-                            <div class="psych-kpi-label">Got ABA assessment</div>
+                            <div class="psych-kpi-label">Have ABA billing</div>
                         </div>
                         <div class="psych-kpi">
                             <div class="psych-kpi-val" style="color:${pipeline.length ? 'var(--warning)' : 'var(--success)'}">${pipeline.length}</div>
