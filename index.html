@@ -1031,26 +1031,48 @@
         }
 
         function calcSupervisionData(provider, targetWeeks) {
-            // Supervision % = 97155 hrs ÷ 97153 hrs
-            const rows = allData.filter(r => {
-                const pname = `${r.ProviderFirstName} ${r.ProviderLastName}`;
-                const week  = getWeekNumber(r.DateOfService);
-                const ag    = parseFloat(r.ClientAgreedCharges);
-                const code  = r.ProcedureCode;
-                return pname === provider && targetWeeks.includes(week) && ag > 0
-                    && (code === '97153' || code === '97155');
+            // Numerator:   this BCBA's 97155 hrs per client
+            // Denominator: ALL providers' 97153 hrs for that same client
+            // (technicians bill 97153; BCBA covers with 97155 supervision)
+
+            // Step 1 — find clients this BCBA has billed 97155 for
+            const bcbaClients = new Set(
+                allData
+                    .filter(r => {
+                        const pname = `${r.ProviderFirstName} ${r.ProviderLastName}`;
+                        const week  = getWeekNumber(r.DateOfService);
+                        const ag    = parseFloat(r.ClientAgreedCharges);
+                        return pname === provider && r.ProcedureCode === '97155'
+                            && targetWeeks.includes(week) && ag > 0;
+                    })
+                    .map(r => r.ClientId)
+                    .filter(Boolean)
+            );
+
+            const clientMap = {};
+            bcbaClients.forEach(cid => {
+                clientMap[cid] = { hrs97153: 0, hrs97155: 0 };
             });
 
-            let prov97153 = 0, prov97155 = 0;
-            const clientMap = {};
-
-            rows.forEach(r => {
+            // Step 2 — for those clients, sum ALL 97153 hrs from any provider
+            allData.forEach(r => {
+                const cid  = r.ClientId;
+                const week = getWeekNumber(r.DateOfService);
+                const ag   = parseFloat(r.ClientAgreedCharges);
+                if (!bcbaClients.has(cid) || !targetWeeks.includes(week) || ag <= 0) return;
                 const hrs = parseFloat(r.TimeWorkedInHours) || 0;
-                const cid = r.ClientId || 'Unknown';
-                if (r.ProcedureCode === '97153') prov97153 += hrs;
-                if (r.ProcedureCode === '97155') prov97155 += hrs;
-                if (!clientMap[cid]) clientMap[cid] = { hrs97153: 0, hrs97155: 0 };
                 if (r.ProcedureCode === '97153') clientMap[cid].hrs97153 += hrs;
+            });
+
+            // Step 3 — sum this BCBA's 97155 hrs per client
+            allData.forEach(r => {
+                const pname = `${r.ProviderFirstName} ${r.ProviderLastName}`;
+                const cid   = r.ClientId;
+                const week  = getWeekNumber(r.DateOfService);
+                const ag    = parseFloat(r.ClientAgreedCharges);
+                if (pname !== provider || !bcbaClients.has(cid)) return;
+                if (!targetWeeks.includes(week) || ag <= 0) return;
+                const hrs = parseFloat(r.TimeWorkedInHours) || 0;
                 if (r.ProcedureCode === '97155') clientMap[cid].hrs97155 += hrs;
             });
 
@@ -1063,10 +1085,13 @@
                 }))
                 .sort((a, b) => a.pct - b.pct); // worst first
 
+            const totalProv97153 = clients.reduce((s, c) => s + c.hrs97153, 0);
+            const totalProv97155 = clients.reduce((s, c) => s + c.hrs97155, 0);
+
             return {
-                prov97153,
-                prov97155,
-                providerPct:          prov97153 > 0 ? (prov97155 / prov97153) * 100 : 0,
+                prov97153:            totalProv97153,
+                prov97155:            totalProv97155,
+                providerPct:          totalProv97153 > 0 ? (totalProv97155 / totalProv97153) * 100 : 0,
                 clients,
                 clientsMeetingTarget: clients.filter(c => c.pct >= 10).length,
             };
