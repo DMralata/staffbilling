@@ -818,6 +818,94 @@
             color: var(--text-dim);
         }
 
+        /* ─── PSYCHOLOGY DASHBOARD ─────────────────────────────── */
+        .psych-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .psych-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .psych-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+        }
+        .psych-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .psych-status-badge {
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0.3rem 0.75rem;
+            border-radius: 999px;
+        }
+        .psych-status-met    { background: rgba(81,207,102,0.15); color: var(--success); border: 1px solid rgba(81,207,102,0.3); }
+        .psych-status-missed { background: rgba(255,107,107,0.12); color: var(--warning); border: 1px solid rgba(255,107,107,0.25); }
+        .psych-kpi-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        .psych-kpi {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 0.75rem 1rem;
+            text-align: center;
+        }
+        .psych-kpi-val {
+            font-size: 1.6rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.1;
+        }
+        .psych-kpi-label {
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.2rem;
+        }
+        .psych-chart-wrap {
+            height: 180px;
+            position: relative;
+        }
+        .psych-week-row {
+            display: flex;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+        .psych-week-pip {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .psych-week-pip .pw-label { font-size: 0.58rem; color: var(--text-dim); }
+        .psych-week-pip .pw-val {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 5px;
+            min-width: 26px;
+            text-align: center;
+        }
+        .pw-met    { background: rgba(81,207,102,0.18); color: var(--success); border: 1px solid rgba(81,207,102,0.3); }
+        .pw-missed { background: rgba(255,107,107,0.14); color: var(--warning); border: 1px solid rgba(255,107,107,0.25); }
+        .pw-zero   { background: rgba(255,255,255,0.04); color: var(--text-dim); border: 1px solid var(--border); }
+
         /* ─── SUPERVISION SECTION ──────────────────────────────── */
         .supervision-section {
             background: var(--bg-light);
@@ -1152,6 +1240,20 @@
         </div>
     </div>
 
+    <!-- ═══ PSYCHOLOGY DASHBOARD ════════════════════════════════ -->
+    <div class="dash-view" id="psychDashboard">
+        <div class="dash-container" style="max-width:1000px">
+            <div class="dash-header">
+                <div class="dash-header-left">
+                    <h1>🧠 Psychology Department</h1>
+                    <div class="dash-subtitle">Diagnosis Completions (96136) · Weekly Targets</div>
+                </div>
+                <button class="btn-back" id="psychBackBtn">← Switch View</button>
+            </div>
+            <div id="psychContent"></div>
+        </div>
+    </div>
+
     <!-- ═══ INDIVIDUAL DASHBOARD ════════════════════════════════ -->
     <div class="dash-view" id="individualDashboard">
         <div class="dash-container" style="max-width:1200px">
@@ -1209,6 +1311,12 @@
         const AUTH_WEEKS = 26; // 6-month authorization period ≈ 26 weeks
         const TARGET_HRS = 25;
         const ALL_KEY    = 'ALL';
+        const PSYCH_KEY  = 'Psychology';
+        const PSYCH_PROVIDERS = [
+            { name: 'Eileen Santaella-Peona', target: 4 },
+            { name: 'Katy Sampson',           target: 2 },
+        ];
+        const PSYCH_CODE = '96136';
 
         /* ── STATE ─────────────────────────────────────────────── */
         let allData      = [];
@@ -1411,6 +1519,7 @@
         function hideAll() {
             document.getElementById('selectionScreen').style.display    = 'none';
             document.getElementById('allDashboard').style.display       = 'none';
+            document.getElementById('psychDashboard').style.display     = 'none';
             document.getElementById('individualDashboard').style.display = 'none';
         }
 
@@ -1426,6 +1535,12 @@
             allOpt.value = ALL_KEY;
             allOpt.textContent = '👥 ALL — Full Team View';
             select.appendChild(allOpt);
+
+            // Psychology department option
+            const psychOpt = document.createElement('option');
+            psychOpt.value = PSYCH_KEY;
+            psychOpt.textContent = '🧠 Psychology Department';
+            select.appendChild(psychOpt);
 
             // Separator
             const sep = document.createElement('option');
@@ -1449,7 +1564,7 @@
 
         /* ── PASSWORD MODAL ────────────────────────────────────── */
         function showPasswordModal(name) {
-            const displayName = name === ALL_KEY ? '👥 Full Team View' : name;
+            const displayName = name === ALL_KEY ? '👥 Full Team View' : name === PSYCH_KEY ? '🧠 Psychology Department' : name;
             document.getElementById('modalEmployeeName').textContent = displayName;
             document.getElementById('passwordInput').value = '';
             document.getElementById('passwordInput').classList.remove('shake');
@@ -1467,11 +1582,14 @@
         function attemptUnlock() {
             const key     = document.getElementById('passwordModal').dataset.key;
             const entered = document.getElementById('passwordInput').value;
-            const correct = passwordMap[key];
+            // Psychology shares the ALL admin password
+            const correct = key === PSYCH_KEY ? passwordMap[ALL_KEY] : passwordMap[key];
 
             if (correct && entered === correct) {
                 hidePasswordModal();
-                key === ALL_KEY ? renderAllDashboard() : renderIndividualDashboard(key);
+                if (key === ALL_KEY)   renderAllDashboard();
+                else if (key === PSYCH_KEY) renderPsychDashboard();
+                else renderIndividualDashboard(key);
             } else {
                 const input = document.getElementById('passwordInput');
                 input.classList.remove('shake');
@@ -2052,6 +2170,165 @@
             `;
         }
 
+        /* ── PSYCHOLOGY DASHBOARD ───────────────────────────────── */
+        function renderPsychDashboard() {
+            hideAll();
+            document.getElementById('psychDashboard').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            const display12 = sortedWeeks.slice(-12);
+
+            // Build weekly diagnosis counts per provider: name → { week → count }
+            const diagByProvider = {};
+            PSYCH_PROVIDERS.forEach(p => { diagByProvider[p.name] = {}; });
+
+            allData.forEach(r => {
+                if (r.ProcedureCode !== PSYCH_CODE) return;
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                const pname = `${r.ProviderFirstName || ''} ${r.ProviderLastName || ''}`.trim();
+                if (!diagByProvider[pname]) return;
+                const week = getWeekNumber(r.DateOfService);
+                if (!week) return;
+                // Count unique clients per week (one diagnosis per client per week)
+                const cid = r.ClientId || r.DateOfService;
+                if (!diagByProvider[pname][week]) diagByProvider[pname][week] = new Set();
+                diagByProvider[pname][week].add(cid);
+            });
+
+            // Convert Sets to counts
+            PSYCH_PROVIDERS.forEach(p => {
+                Object.keys(diagByProvider[p.name]).forEach(w => {
+                    diagByProvider[p.name][w] = diagByProvider[p.name][w].size;
+                });
+            });
+
+            const chartInstances = [];
+
+            const cards = PSYCH_PROVIDERS.map((p, idx) => {
+                const weekCounts = display12.map(w => diagByProvider[p.name][w] || 0);
+                const thisWeek   = diagByProvider[p.name][latestWeek] || 0;
+                const avg4       = (() => {
+                    const vals = last4Weeks.map(w => diagByProvider[p.name][w] || 0);
+                    return vals.reduce((s,v)=>s+v,0) / vals.length;
+                })();
+                const met        = thisWeek >= p.target;
+                const totalAll   = weekCounts.reduce((s,v)=>s+v,0);
+
+                // 8-week rolling avg
+                const rolling = weekCounts.map((_, i) => {
+                    const slice = weekCounts.slice(Math.max(0, i-7), i+1);
+                    return +(slice.reduce((s,v)=>s+v,0) / slice.length).toFixed(2);
+                });
+
+                const barColors = weekCounts.map(v =>
+                    v >= p.target ? 'rgba(81,207,102,0.75)' : 'rgba(255,107,107,0.7)'
+                );
+
+                const pipHTML = display12.slice(-8).map(w => {
+                    const cnt = diagByProvider[p.name][w] || 0;
+                    const cls = cnt === 0 ? 'pw-zero' : cnt >= p.target ? 'pw-met' : 'pw-missed';
+                    const short = w.replace(/^\d{4}-/, '');
+                    return `<div class="psych-week-pip">
+                        <span class="pw-label">${short}</span>
+                        <span class="pw-val ${cls}">${cnt || '—'}</span>
+                    </div>`;
+                }).join('');
+
+                return `
+                    <div class="psych-card">
+                        <div class="psych-card-header">
+                            <div class="psych-name">${p.name.split(' ')[0]} ${p.name.split(' ').slice(-1)[0]}</div>
+                            <span class="psych-status-badge ${met ? 'psych-status-met' : 'psych-status-missed'}">
+                                ${met ? '✅' : '❌'} ${thisWeek} / ${p.target} this week
+                            </span>
+                        </div>
+                        <div class="psych-kpi-row">
+                            <div class="psych-kpi">
+                                <div class="psych-kpi-val" style="color:${met ? 'var(--success)' : 'var(--warning)'}">${thisWeek}</div>
+                                <div class="psych-kpi-label">This week</div>
+                            </div>
+                            <div class="psych-kpi">
+                                <div class="psych-kpi-val" style="color:var(--accent)">${avg4.toFixed(1)}</div>
+                                <div class="psych-kpi-label">4-wk avg</div>
+                            </div>
+                            <div class="psych-kpi">
+                                <div class="psych-kpi-val">${p.target}</div>
+                                <div class="psych-kpi-label">Target / wk</div>
+                            </div>
+                            <div class="psych-kpi">
+                                <div class="psych-kpi-val" style="color:var(--text-dim)">${totalAll}</div>
+                                <div class="psych-kpi-label">Last 12 wks</div>
+                            </div>
+                        </div>
+                        <div class="psych-chart-wrap">
+                            <canvas id="psychChart${idx}"></canvas>
+                        </div>
+                        <div class="psych-week-row">${pipHTML}</div>
+                    </div>`;
+            }).join('');
+
+            document.getElementById('psychContent').innerHTML = `<div class="psych-grid">${cards}</div>`;
+
+            // Render charts after DOM is set
+            PSYCH_PROVIDERS.forEach((p, idx) => {
+                const weekCounts = display12.map(w => diagByProvider[p.name][w] || 0);
+                const rolling = weekCounts.map((_, i) => {
+                    const slice = weekCounts.slice(Math.max(0, i-7), i+1);
+                    return +(slice.reduce((s,v)=>s+v,0) / slice.length).toFixed(2);
+                });
+                const barColors = weekCounts.map(v =>
+                    v >= p.target ? 'rgba(81,207,102,0.75)' : 'rgba(255,107,107,0.7)'
+                );
+                const targetLine = display12.map(() => p.target);
+
+                const inst = new Chart(
+                    document.getElementById(`psychChart${idx}`).getContext('2d'), {
+                    data: {
+                        labels: display12,
+                        datasets: [
+                            {
+                                type: 'bar', label: 'Diagnoses',
+                                data: weekCounts, backgroundColor: barColors,
+                                borderRadius: 5, borderSkipped: false, order: 3,
+                            },
+                            {
+                                type: 'line', label: '8-Wk Rolling Avg',
+                                data: rolling,
+                                borderColor: 'rgba(5,191,219,0.85)', borderWidth: 2,
+                                pointRadius: 3, pointBackgroundColor: '#05bfdb',
+                                fill: false, tension: 0.4, order: 2,
+                            },
+                            {
+                                type: 'line', label: `Target (${p.target})`,
+                                data: targetLine,
+                                borderColor: 'rgba(81,207,102,0.5)', borderWidth: 1.5,
+                                borderDash: [6,3], pointRadius: 0,
+                                fill: false, order: 1,
+                            },
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: true, labels: { color:'#8b949e', font:{family:'JetBrains Mono',size:10}, boxWidth:14, padding:12 } },
+                            tooltip: {
+                                backgroundColor:'#161b22', borderColor:'#30363d', borderWidth:1,
+                                titleColor:'#c9d1d9', bodyColor:'#8b949e',
+                                titleFont:{family:'JetBrains Mono'}, bodyFont:{family:'JetBrains Mono'},
+                            }
+                        },
+                        scales: {
+                            x: { grid:{color:'rgba(255,255,255,0.03)'}, ticks:{color:'#8b949e',font:{family:'JetBrains Mono',size:9},maxRotation:45} },
+                            y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#8b949e',font:{family:'JetBrains Mono',size:10}}, beginAtZero:true, suggestedMax: p.target + 2 }
+                        }
+                    }
+                });
+                chartInstances.push(inst);
+            });
+        }
+
         /* ── ASSESSMENT BANNER ──────────────────────────────────── */
         function renderAssessmentBanner() {
             const TARGET = 2;
@@ -2610,20 +2887,22 @@
             const val = document.getElementById('employeeSelect').value;
             if (!val) return;
 
-            const hasPassword = !!passwordMap[val];
-            const isAll       = val === ALL_KEY;
+            const isAll   = val === ALL_KEY;
+            const isPsych = val === PSYCH_KEY;
+            // Psychology uses the ALL password
+            const hasPassword = isPsych ? !!passwordMap[ALL_KEY] : !!passwordMap[val];
 
-            // ALL always requires a password — block if none is configured
-            if (isAll && !hasPassword) {
+            // ALL/Psychology always require a password — block if none is configured
+            if ((isAll || isPsych) && !hasPassword) {
                 const errDiv = document.getElementById('selectionError');
                 errDiv.style.display = 'block';
-                errDiv.textContent = 'No password found for ALL. Add a row with ProviderName = "ALL" to your Passwords sheet.';
+                errDiv.textContent = 'No admin password found. Add a row with ProviderName = "ALL" to your Passwords sheet.';
                 return;
             }
 
             document.getElementById('selectionError').style.display = 'none';
 
-            if (hasPassword) {
+            if (hasPassword || isPsych) {
                 showPasswordModal(val);
             } else {
                 renderIndividualDashboard(val);
@@ -2639,6 +2918,7 @@
         document.getElementById('cancelPasswordBtn').addEventListener('click', hidePasswordModal);
         document.getElementById('backBtn').addEventListener('click', showSelectionScreen);
         document.getElementById('allBackBtn').addEventListener('click', showSelectionScreen);
+        document.getElementById('psychBackBtn').addEventListener('click', showSelectionScreen);
 
         /* ── INIT ──────────────────────────────────────────────── */
         async function init() {
