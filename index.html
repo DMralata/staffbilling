@@ -648,6 +648,152 @@
             margin-top: 1rem;
         }
 
+        /* ─── SUPERVISION SECTION ──────────────────────────────── */
+        .supervision-section {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .supervision-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .supervision-stat {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .supervision-stat::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+
+        .supervision-stat.good::before  { background: var(--success); }
+        .supervision-stat.warn::before  { background: var(--warning); }
+        .supervision-stat.neutral::before { background: linear-gradient(90deg, var(--accent), var(--secondary)); }
+
+        .supervision-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .supervision-stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.4rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+
+        .supervision-stat-sub {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .supervision-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .supervision-table thead th {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            background: rgba(255,255,255,0.02);
+            border-radius: 4px;
+        }
+
+        .supervision-table thead th:not(:first-child) { text-align: center; }
+
+        .supervision-table tbody tr {
+            transition: all 0.15s;
+        }
+
+        .supervision-table tbody td {
+            padding: 0.75rem;
+            background: rgba(255,255,255,0.02);
+            border-top: 1px solid transparent;
+            border-bottom: 1px solid transparent;
+        }
+
+        .supervision-table tbody td:first-child {
+            border-left: 1px solid transparent;
+            border-radius: 8px 0 0 8px;
+        }
+
+        .supervision-table tbody td:last-child {
+            border-right: 1px solid transparent;
+            border-radius: 0 8px 8px 0;
+            text-align: center;
+        }
+
+        .supervision-table tbody td:not(:first-child) { text-align: center; }
+
+        .supervision-table tbody tr:hover td {
+            background: rgba(5,191,219,0.05);
+            border-color: rgba(5,191,219,0.15);
+        }
+
+        .supervision-table tbody tr.row-warn td {
+            background: rgba(255,107,107,0.06);
+        }
+
+        .supervision-table tbody tr.row-warn:hover td {
+            background: rgba(255,107,107,0.1);
+        }
+
+        .pct-bar-cell { min-width: 120px; }
+
+        .pct-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pct-bar-bg {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .pct-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.8s ease-out;
+        }
+
+        .pct-bar-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            min-width: 38px;
+            text-align: right;
+        }
+
         /* ─── RESPONSIVE ────────────────────────────────────────── */
         @media (max-width: 768px) {
             .dash-view { padding: 1rem; }
@@ -755,6 +901,15 @@
                 <div class="section-title">Weekly Hours Trend</div>
                 <div class="chart-wrapper">
                     <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Supervision compliance -->
+            <div class="supervision-section">
+                <div class="section-title">97155 Supervision Compliance · Last 4 Weeks</div>
+                <div class="supervision-summary" id="supervisionSummary"></div>
+                <div style="overflow-x:auto">
+                    <table class="supervision-table" id="supervisionTable"></table>
                 </div>
             </div>
 
@@ -871,6 +1026,49 @@
             ).size;
         }
 
+        function calcTotal(weeks, targetWeeks) {
+            return targetWeeks.reduce((sum, w) => sum + (weeks[w] || 0), 0);
+        }
+
+        function calcSupervisionData(provider, targetWeeks) {
+            const rows = allData.filter(r => {
+                const pname = `${r.ProviderFirstName} ${r.ProviderLastName}`;
+                const week  = getWeekNumber(r.DateOfService);
+                const ag    = parseFloat(r.ClientAgreedCharges);
+                return pname === provider && targetWeeks.includes(week) && ag > 0;
+            });
+
+            let provTotal = 0, prov97155 = 0;
+            const clientMap = {};
+
+            rows.forEach(r => {
+                const hrs = parseFloat(r.TimeWorkedInHours) || 0;
+                const cid = r.ClientId || 'Unknown';
+                provTotal += hrs;
+                if (r.ProcedureCode === '97155') prov97155 += hrs;
+                if (!clientMap[cid]) clientMap[cid] = { total: 0, hrs97155: 0 };
+                clientMap[cid].total += hrs;
+                if (r.ProcedureCode === '97155') clientMap[cid].hrs97155 += hrs;
+            });
+
+            const clients = Object.entries(clientMap)
+                .map(([id, d]) => ({
+                    id,
+                    total:    d.total,
+                    hrs97155: d.hrs97155,
+                    pct:      d.total > 0 ? (d.hrs97155 / d.total) * 100 : 0,
+                }))
+                .sort((a, b) => a.pct - b.pct); // worst first
+
+            return {
+                provTotal,
+                prov97155,
+                providerPct:          provTotal > 0 ? (prov97155 / provTotal) * 100 : 0,
+                clients,
+                clientsMeetingTarget: clients.filter(c => c.pct >= 10).length,
+            };
+        }
+
         function heatClass(hrs) {
             if (hrs === 0)          return 'heat-empty';
             if (hrs >= TARGET_HRS)  return 'heat-target';
@@ -966,7 +1164,8 @@
             const providers   = Object.entries(providerData);
             const provStats   = providers.map(([name, weeks]) => ({
                 name,
-                avg: calcAvg(weeks, last4Weeks),
+                avg:     calcAvg(weeks, last4Weeks),
+                total4w: calcTotal(weeks, last4Weeks),
                 clients: calcClients(name, latestWeek),
                 weeks,
             }));
@@ -1003,7 +1202,7 @@
             /* ── KPI cards ── */
             const grid = document.getElementById('teamKpiGrid');
             grid.innerHTML = '';
-            provStats.sort((a,b) => b.avg - a.avg).forEach(({ name, avg, clients }) => {
+            provStats.sort((a,b) => b.avg - a.avg).forEach(({ name, avg, total4w, clients }) => {
                 const on  = avg >= TARGET_HRS;
                 const pct = Math.min((avg / TARGET_HRS) * 100, 100);
                 const bar = on
@@ -1031,7 +1230,9 @@
                     </div>
                     <div class="kpi-client-row">
                         <span class="kpi-client-val">${clients}</span>
-                        <span>clients this week</span>
+                        <span>clients</span>
+                        <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${total4w.toFixed(1)}</span>
+                        <span style="font-size:0.78rem;color:var(--text-dim)">hrs total</span>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -1087,6 +1288,7 @@
 
             const weeks   = providerData[name] || {};
             const avg     = calcAvg(weeks, last4Weeks);
+            const total4w = calcTotal(weeks, last4Weeks);
             const latest  = weeks[latestWeek] || 0;
             const clients = calcClients(name, latestWeek);
             const pct     = Math.min((avg / TARGET_HRS) * 100, 100);
@@ -1120,6 +1322,11 @@
                     <div class="metric-sub">unique clients, latest week</div>
                 </div>
                 <div class="metric-card">
+                    <div class="metric-label">4-Week Total</div>
+                    <div class="metric-value" style="color:var(--accent)">${total4w.toFixed(1)}</div>
+                    <div class="metric-sub">hrs over last 4 weeks</div>
+                </div>
+                <div class="metric-card">
                     <div class="metric-label">Status</div>
                     <div style="margin-top:0.85rem">
                         <span class="status-badge ${on ? 'status-meeting' : 'status-below'}">
@@ -1135,6 +1342,7 @@
             `;
 
             renderTrendChart(weeks);
+            renderSupervisionSection(name);
             renderIndividualHeatmap(name, weeks);
         }
 
@@ -1212,6 +1420,95 @@
                     }
                 }
             );
+        }
+
+        function renderSupervisionSection(name) {
+            const sup  = calcSupervisionData(name, last4Weeks);
+            const pOn  = sup.providerPct >= 5;
+            const cAll = sup.clientsMeetingTarget;
+            const cTot = sup.clients.length;
+
+            /* ── Summary cards ── */
+            document.getElementById('supervisionSummary').innerHTML = `
+                <div class="supervision-stat ${pOn ? 'good' : 'warn'}">
+                    <div class="supervision-stat-label">Provider Supervision</div>
+                    <div class="supervision-stat-value" style="color:${pOn ? 'var(--success)' : 'var(--warning)'}">
+                        ${sup.providerPct.toFixed(1)}%
+                    </div>
+                    <div class="supervision-stat-sub">
+                        ${sup.prov97155.toFixed(1)} of ${sup.provTotal.toFixed(1)} hrs are 97155
+                    </div>
+                    <div style="margin-top:0.6rem">
+                        <span class="status-badge ${pOn ? 'status-meeting' : 'status-below'}">
+                            ${pOn ? '✓ Meets 5% target' : '✗ Below 5% target'}
+                        </span>
+                    </div>
+                </div>
+                <div class="supervision-stat ${cAll === cTot ? 'good' : cAll > 0 ? 'warn' : 'warn'}">
+                    <div class="supervision-stat-label">Clients at 10%</div>
+                    <div class="supervision-stat-value" style="color:${cAll === cTot ? 'var(--success)' : 'var(--warning)'}">
+                        ${cAll}<span style="font-size:1.2rem;color:var(--text-dim)"> / ${cTot}</span>
+                    </div>
+                    <div class="supervision-stat-sub">clients meeting 10% supervision</div>
+                    <div style="margin-top:0.6rem">
+                        <span class="status-badge ${cAll === cTot ? 'status-meeting' : 'status-below'}">
+                            ${cTot - cAll > 0 ? `✗ ${cTot - cAll} client${cTot - cAll > 1 ? 's' : ''} below target` : '✓ All clients met'}
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            /* ── Client table ── */
+            const table = document.getElementById('supervisionTable');
+            table.innerHTML = '';
+
+            if (sup.clients.length === 0) {
+                table.innerHTML = `<tr><td colspan="5" style="padding:1rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.85rem">No 97155 data found for this period.</td></tr>`;
+                return;
+            }
+
+            // Header
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th>Client ID</th>
+                    <th>Total Hrs</th>
+                    <th>97155 Hrs</th>
+                    <th class="pct-bar-cell">Supervision % <span style="font-weight:400;opacity:0.6">(target 10%)</span></th>
+                    <th>Status</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            sup.clients.forEach(c => {
+                const met       = c.pct >= 10;
+                const fillColor = met ? 'var(--success)' : c.pct >= 5 ? '#f59e0b' : 'var(--warning)';
+                const fillWidth = Math.min(c.pct / 20 * 100, 100); // scale: 20% = full bar
+
+                const tr = document.createElement('tr');
+                if (!met) tr.className = 'row-warn';
+                tr.innerHTML = `
+                    <td style="font-weight:600;color:var(--text)">${c.id}</td>
+                    <td>${c.total.toFixed(1)}</td>
+                    <td style="color:${c.hrs97155 > 0 ? 'var(--accent)' : 'var(--text-dim)'}">${c.hrs97155.toFixed(1)}</td>
+                    <td class="pct-bar-cell">
+                        <div class="pct-bar-wrap">
+                            <div class="pct-bar-bg">
+                                <div class="pct-bar-fill" style="width:${fillWidth}%;background:${fillColor}"></div>
+                            </div>
+                            <span class="pct-bar-label" style="color:${fillColor}">${c.pct.toFixed(1)}%</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge ${met ? 'status-meeting' : 'status-below'}">
+                            ${met ? '✓ Met' : '✗ Below'}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
         }
 
         function renderIndividualHeatmap(name, weeks) {
