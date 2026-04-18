@@ -964,6 +964,78 @@
             text-align: right;
         }
 
+        /* ─── ASSESSMENT BANNER ─────────────────────────────────── */
+        .assessment-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border: 1px solid;
+        }
+        .assessment-banner.met {
+            background: rgba(81,207,102,0.08);
+            border-color: rgba(81,207,102,0.35);
+        }
+        .assessment-banner.missed {
+            background: rgba(255,107,107,0.08);
+            border-color: rgba(255,107,107,0.35);
+        }
+        .assessment-banner-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .assessment-status-icon {
+            font-size: 2rem;
+            line-height: 1;
+        }
+        .assessment-label {
+            font-size: 0.72rem;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-dim);
+            margin-bottom: 0.2rem;
+        }
+        .assessment-headline {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .assessment-headline span.met-color  { color: var(--success); }
+        .assessment-headline span.miss-color { color: var(--warning); }
+        .assessment-history {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .assessment-week-chip {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.15rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .assessment-week-chip .chip-week {
+            font-size: 0.62rem;
+            color: var(--text-dim);
+        }
+        .assessment-week-chip .chip-count {
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            min-width: 32px;
+            text-align: center;
+        }
+        .chip-count.chip-met    { background: rgba(81,207,102,0.18); color: var(--success); border: 1px solid rgba(81,207,102,0.3); }
+        .chip-count.chip-missed { background: rgba(255,107,107,0.15); color: var(--warning); border: 1px solid rgba(255,107,107,0.25); }
+        .chip-count.chip-zero   { background: rgba(255,255,255,0.04); color: var(--text-dim); border: 1px solid var(--border); }
+
         /* ─── RESPONSIVE ────────────────────────────────────────── */
         @media (max-width: 768px) {
             .dash-view { padding: 1rem; }
@@ -1026,6 +1098,9 @@
                 </div>
                 <button class="btn-back" id="allBackBtn">← Switch View</button>
             </div>
+
+            <!-- Assessment accountability banner -->
+            <div id="assessmentBanner"></div>
 
             <!-- Summary row -->
             <div class="summary-stats" id="teamSummaryStats"></div>
@@ -1884,6 +1959,60 @@
             `;
         }
 
+        /* ── ASSESSMENT BANNER ──────────────────────────────────── */
+        function renderAssessmentBanner() {
+            const TARGET = 2;
+            const PROC   = '97151';
+
+            // Count assessments (distinct clients billed 97151 with agreed charges) per week
+            const countByWeek = {};
+            sortedWeeks.forEach(w => countByWeek[w] = new Set());
+            allData.forEach(r => {
+                if (r.ProcedureCode !== PROC) return;
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                const week = getWeekNumber(r.DateOfService);
+                if (!week || !(week in countByWeek)) return;
+                const cid = r.ClientId || r.ProviderFirstName; // distinct per client
+                countByWeek[week].add(cid);
+            });
+
+            const recentWeeks = sortedWeeks.slice(-6);
+            const latestCount = countByWeek[latestWeek]?.size || 0;
+            const met         = latestCount >= TARGET;
+
+            const historyChips = recentWeeks.map(w => {
+                const cnt = countByWeek[w]?.size || 0;
+                const cls = cnt === 0 ? 'chip-zero' : cnt >= TARGET ? 'chip-met' : 'chip-missed';
+                const label = cnt === 0 ? '—' : cnt.toString();
+                // shorten week label: "2025-W04" → "W04"
+                const short = w.replace(/^\d{4}-/, '');
+                return `
+                    <div class="assessment-week-chip">
+                        <span class="chip-week">${short}</span>
+                        <span class="chip-count ${cls}">${label}</span>
+                    </div>`;
+            }).join('');
+
+            const banner = document.getElementById('assessmentBanner');
+            banner.innerHTML = `
+                <div class="assessment-banner ${met ? 'met' : 'missed'}">
+                    <div class="assessment-banner-left">
+                        <div class="assessment-status-icon">${met ? '✅' : '❌'}</div>
+                        <div>
+                            <div class="assessment-label">Weekly ABA Assessments (97151) · Target: ${TARGET}</div>
+                            <div class="assessment-headline">
+                                This week: <span class="${met ? 'met-color' : 'miss-color'}">${latestCount} assessment${latestCount !== 1 ? 's' : ''} completed</span>
+                                ${met
+                                    ? '— target met'
+                                    : `— <span class="miss-color">${TARGET - latestCount} still needed this week</span>`}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="assessment-history">${historyChips}</div>
+                </div>`;
+        }
+
         /* ── ALL / TEAM DASHBOARD ──────────────────────────────── */
         function renderAllDashboard() {
             hideAll();
@@ -2008,7 +2137,8 @@
                     table.appendChild(row);
                 });
 
-            /* ── Quarter progress, team trend, client heatmap, insights ── */
+            /* ── Assessment banner, quarter progress, team trend, client heatmap, insights ── */
+            renderAssessmentBanner();
             renderQuarterProgress();
             renderTeamTrendChart();
             renderClientHeatmap();
