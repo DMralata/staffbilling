@@ -1205,12 +1205,16 @@
         const SHEET_ID   = '1IwjOdgUG-gHzaQdfwxyUtIcpkDFyFKBylfHhVJvtTe0';
         const MAIN_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
         const PASS_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Passwords`;
+        const AUTH_URL   = 'https://docs.google.com/spreadsheets/d/1tnUU6w-OHuXgaesHDnwW-uoR15Czr0Cl3L3iZIN0jUc/gviz/tq?tqx=out:csv';
+        const AUTH_WEEKS = 26; // 6-month authorization period ≈ 26 weeks
         const TARGET_HRS = 25;
         const ALL_KEY    = 'ALL';
 
         /* ── STATE ─────────────────────────────────────────────── */
         let allData      = [];
         let passwordMap  = {};
+        let authHours    = {}; // clientId → weekly authorized hours (units ÷ 4 ÷ 26)
+        let clientNames  = {}; // clientId → "XX XX" (first 2 of first + last name)
         let providerData = {};
         let sortedWeeks  = [];
         let last4Weeks   = [];
@@ -1250,6 +1254,32 @@
             d.setDate(d.getDate() + 4 - (d.getDay() || 7));
             const y = new Date(d.getFullYear(), 0, 1);
             return `${d.getFullYear()}-W${String(Math.ceil((((d-y)/86400000)+1)/7)).padStart(2,'0')}`;
+        }
+
+        /* ── CLIENT NAME MAP ───────────────────────────────────── */
+        function buildClientNameMap(data) {
+            if (!data.length) return;
+            const keys = Object.keys(data[0]);
+            // Flexible match for first / last name columns
+            const firstKey = keys.find(k => k === 'ClientFirstName') ||
+                             keys.find(k => k.toLowerCase().replace(/[\s_]/g,'') === 'clientfirstname');
+            const lastKey  = keys.find(k => k === 'ClientLastName') ||
+                             keys.find(k => k.toLowerCase().replace(/[\s_]/g,'') === 'clientlastname');
+            if (!firstKey && !lastKey) return; // columns not found — stay silent
+            data.forEach(r => {
+                const id = (r.ClientId || '').trim();
+                if (!id || clientNames[id]) return;
+                const f = (r[firstKey] || '').trim();
+                const l = (r[lastKey]  || '').trim();
+                const initials = `${f.slice(0,2)}${l.slice(0,2)}`.toUpperCase();
+                if (initials) clientNames[id] = initials;
+            });
+        }
+
+        // Returns "ID · FFLL" if we have a name, otherwise just "ID"
+        function clientLabel(id) {
+            const init = clientNames[id];
+            return init ? `${id} · ${init}` : id;
         }
 
         /* ── DATA PROCESSING ───────────────────────────────────── */
@@ -1528,15 +1558,43 @@
         }
 
         // 0→red, 0.5→amber, 1→green  (matches reference dashboard)
-        function clientHeatColor(hours, max) {
+        // pct = hours / authWeeklyHrs (or hours / max if no auth data)
+        // 0%→red  50%→amber  90-110%→green  >110%→bright green
+        function clientHeatColor(hours, max, authWeeklyHrs) {
             if (!hours || hours === 0) return { bg: 'rgba(22,27,34,0.9)', color: '#3a4555' };
+            if (authWeeklyHrs && authWeeklyHrs > 0) {
+                const pct = hours / authWeeklyHrs;
+                let r, g, b = 40, alpha;
+                if (pct <= 0.5) {
+                    // 0–50%: dark red → red
+                    r = 200; g = Math.round(pct * 2 * 60); alpha = 0.3 + pct * 0.4;
+                } else if (pct <= 0.85) {
+                    // 50–85%: red → amber
+                    const t = (pct - 0.5) / 0.35;
+                    r = 220; g = Math.round(60 + t * 120); alpha = 0.5 + t * 0.2;
+                } else if (pct <= 1.1) {
+                    // 85–110%: amber → green (target zone)
+                    const t = (pct - 0.85) / 0.25;
+                    r = Math.round(220 - t * 160); g = 180; alpha = 0.7 + t * 0.25;
+                } else {
+                    // >110%: over-authorized — bright teal/blue flag
+                    r = 30; g = 160; b = 200; alpha = 0.85;
+                }
+                return {
+                    bg:    `rgba(${r},${g},${b},${alpha})`,
+                    color: '#e6edf3',
+                    pct,
+                };
+            }
+            // Fallback: colour by max hours (original behaviour)
             const pct   = Math.min(hours / max, 1);
             const r     = pct < 0.5 ? 220 : Math.round(220 - (pct - 0.5) * 2 * 160);
             const g     = pct < 0.5 ? Math.round(pct * 2 * 180) : 180;
             const alpha = 0.25 + pct * 0.7;
             return {
                 bg:    `rgba(${r},${g},40,${alpha})`,
-                color: pct > 0.25 ? '#e6edf3' : '#7d8590'
+                color: pct > 0.25 ? '#e6edf3' : '#7d8590',
+                pct,
             };
         }
 
@@ -1720,6 +1778,7 @@
             const { clients, weeks, maxHrs } = buildClientHeatmap();
             const table = document.getElementById('clientHeatmapTable');
             table.innerHTML = '';
+            const hasAuth = Object.keys(authHours).length > 0;
 
             if (!clients.length) {
                 table.innerHTML = `<tr><td style="padding:1rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.85rem">No 97153 data found.</td></tr>`;
@@ -1733,6 +1792,14 @@
             thN.textContent = 'Client';
             thN.style.cssText = 'text-align:left;min-width:90px;padding-left:0.5rem';
             hRow.appendChild(thN);
+
+            if (hasAuth) {
+                const thA = document.createElement('th');
+                thA.textContent = 'Auth/wk';
+                thA.title = 'Weekly authorized hours (total units ÷ 4 ÷ 26 weeks)';
+                thA.style.cssText = 'color:#a371f7;white-space:nowrap;cursor:help';
+                hRow.appendChild(thA);
+            }
 
             weeks.forEach(week => {
                 const th = document.createElement('th');
@@ -1754,20 +1821,31 @@
             // Body
             const tbody = document.createElement('tbody');
             clients.forEach(client => {
-                const row = document.createElement('tr');
+                const row         = document.createElement('tr');
+                const weeklyAuth  = authHours[client.id] || null;
 
                 const nc = document.createElement('td');
-                nc.textContent = client.id;
+                nc.textContent = clientLabel(client.id);
+                nc.title       = client.id; // hover to see full ID
                 nc.style.cssText = 'font-weight:600;color:var(--text);text-align:left;padding-left:0.5rem;white-space:nowrap;font-size:0.82rem';
                 row.appendChild(nc);
+
+                if (hasAuth) {
+                    const ac = document.createElement('td');
+                    ac.style.cssText = "font-family:'JetBrains Mono',monospace;font-size:0.78rem;font-weight:600;text-align:center;color:#a371f7;white-space:nowrap";
+                    ac.textContent   = weeklyAuth ? weeklyAuth.toFixed(1) : '—';
+                    ac.title         = weeklyAuth ? `${weeklyAuth.toFixed(2)} auth hrs/wk` : 'No authorization data';
+                    row.appendChild(ac);
+                }
 
                 weeks.forEach(week => {
                     const cell = document.createElement('td');
                     const hrs  = client.weeks[week] || 0;
-                    const { bg, color } = clientHeatColor(hrs, maxHrs);
+                    const { bg, color, pct } = clientHeatColor(hrs, maxHrs, weeklyAuth);
                     cell.style.cssText = `background:${bg};color:${color};border-radius:5px;text-align:center;font-size:0.75rem;font-weight:600;padding:0.45rem 0.35rem;transition:transform 0.15s`;
                     cell.textContent = hrs > 0 ? hrs.toFixed(1) : '';
-                    cell.title = `${client.id} · ${week}: ${hrs.toFixed(1)} hrs`;
+                    const pctLabel = weeklyAuth && hrs > 0 ? ` (${(pct * 100).toFixed(0)}% of auth)` : '';
+                    cell.title = `${clientLabel(client.id)} · ${week}: ${hrs.toFixed(1)} hrs${pctLabel}`;
                     cell.addEventListener('mouseenter', () => cell.style.transform = 'scale(1.1)');
                     cell.addEventListener('mouseleave', () => cell.style.transform = '');
                     if (last4Weeks.includes(week) && hrs > 0) {
@@ -1785,17 +1863,32 @@
             });
             table.appendChild(tbody);
 
-            // Legend
+            // Legend — auth-based if we have data, otherwise max-based
             const legend = document.getElementById('clientHeatmapLegend');
-            const swatches = [0.05, 0.2, 0.4, 0.6, 0.8, 1.0].map(p => {
-                const { bg } = clientHeatColor(p * maxHrs, maxHrs);
-                return `<div class="legend-box" style="background:${bg}"></div>`;
-            }).join('');
-            legend.innerHTML = `
-                <span style="font-size:0.72rem;color:var(--text-dim)">0 hrs</span>
-                ${swatches}
-                <span style="font-size:0.72rem;color:var(--text-dim)">${maxHrs.toFixed(0)} hrs (max)</span>
-            `;
+            if (hasAuth) {
+                const dummyAuth = 10;
+                const swatches = [0, 0.25, 0.55, 0.75, 0.92, 1.05, 1.2].map(p => {
+                    const { bg } = clientHeatColor(p * dummyAuth, dummyAuth, dummyAuth);
+                    const label   = p === 0 ? '0%' : `${Math.round(p * 100)}%`;
+                    return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                                <div class="legend-box" style="background:${bg}"></div>
+                                <span style="font-size:0.6rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace">${label}</span>
+                            </div>`;
+                }).join('');
+                legend.innerHTML = `
+                    <span style="font-size:0.72rem;color:var(--text-dim)">% of authorized hrs/wk →</span>
+                    ${swatches}
+                    <span style="font-size:0.72rem;color:#a371f7;margin-left:0.5rem">Purple = auth/wk</span>`;
+            } else {
+                const swatches = [0.05, 0.2, 0.4, 0.6, 0.8, 1.0].map(p => {
+                    const { bg } = clientHeatColor(p * maxHrs, maxHrs, null);
+                    return `<div class="legend-box" style="background:${bg}"></div>`;
+                }).join('');
+                legend.innerHTML = `
+                    <span style="font-size:0.72rem;color:var(--text-dim)">0 hrs</span>
+                    ${swatches}
+                    <span style="font-size:0.72rem;color:var(--text-dim)">${maxHrs.toFixed(0)} hrs (max)</span>`;
+            }
         }
 
         /* ── AI INSIGHTS ENGINE ─────────────────────────────────── */
@@ -2507,16 +2600,41 @@
         /* ── INIT ──────────────────────────────────────────────── */
         async function init() {
             try {
-                const [mainText, passText] = await Promise.all([
+                const [mainText, passText, authText] = await Promise.all([
                     fetch(MAIN_URL).then(r => {
                         if (!r.ok) throw new Error(`HTTP ${r.status}`);
                         return r.text();
                     }),
-                    fetch(PASS_URL).then(r => r.ok ? r.text() : '').catch(() => '')
+                    fetch(PASS_URL).then(r => r.ok ? r.text() : '').catch(() => ''),
+                    fetch(AUTH_URL).then(r => r.ok ? r.text() : '').catch(() => '')
                 ]);
 
                 allData = parseCSV(mainText);
                 if (!allData.length) throw new Error('No data found in the main sheet.');
+
+                buildClientNameMap(allData);
+
+                // Parse authorized hours sheet
+                if (authText) {
+                    const authRows = parseCSV(authText);
+                    if (authRows.length) {
+                        const keys    = Object.keys(authRows[0]);
+                        const idKey   = keys.find(k => k.toLowerCase().replace(/[\s_]/g,'').includes('clientid') || k.toLowerCase().replace(/[\s_]/g,'') === 'clientid');
+                        const unitKey = keys.find(k => k.toLowerCase().replace(/[\s_]/g,'').includes('authorizedunit') || k.toLowerCase().replace(/[\s_]/g,'').includes('authunit'));
+                        if (idKey && unitKey) {
+                            authRows.forEach(row => {
+                                const id    = (row[idKey] || '').trim();
+                                const units = parseFloat(row[unitKey]);
+                                if (id && !isNaN(units) && units > 0) {
+                                    // Convert: total units ÷ 4 (units→hours) ÷ AUTH_WEEKS (period→weekly)
+                                    authHours[id] = units / 4 / AUTH_WEEKS;
+                                }
+                            });
+                        } else {
+                            console.warn('Auth sheet columns not recognized. Expected "ClientID" and "AuthorizedUnits". Found:', keys);
+                        }
+                    }
+                }
 
                 if (passText) {
                     const passRows = parseCSV(passText);
