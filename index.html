@@ -751,6 +751,73 @@
         .wow-new  { background: rgba(81,207,102,0.12);  color: var(--success); border: 1px solid rgba(81,207,102,0.3); }
         .wow-gone { background: rgba(255,107,107,0.12); color: var(--warning); border: 1px solid rgba(255,107,107,0.3); }
 
+        /* ─── AI INSIGHTS SECTION ─────────────────────────────── */
+        .insights-section {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem 1.75rem;
+        }
+        .insights-header {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin-bottom: 1.25rem;
+        }
+        .insights-header .section-title { margin-bottom: 0; }
+        .insights-badge {
+            font-size: 0.65rem;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            background: rgba(5,191,219,0.12);
+            color: var(--accent);
+            border: 1px solid rgba(5,191,219,0.25);
+        }
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 0.9rem;
+        }
+        .insight-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 0.9rem 1rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+        .insight-card.concern  { border-left: 3px solid var(--warning); }
+        .insight-card.warning  { border-left: 3px solid #f59e0b; }
+        .insight-card.positive { border-left: 3px solid var(--success); }
+        .insight-card.info     { border-left: 3px solid var(--accent); }
+        .insight-icon { font-size: 1.2rem; line-height: 1; margin-top: 0.05rem; flex-shrink: 0; }
+        .insight-body { flex: 1; }
+        .insight-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.2rem;
+        }
+        .insight-desc {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+        .insight-tag {
+            display: inline-block;
+            font-size: 0.65rem;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 0.1rem 0.45rem;
+            border-radius: 4px;
+            margin-top: 0.35rem;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-dim);
+        }
+
         /* ─── SUPERVISION SECTION ──────────────────────────────── */
         .supervision-section {
             background: var(--bg-light);
@@ -983,6 +1050,9 @@
                 </div>
                 <div class="legend" id="clientHeatmapLegend"></div>
             </div>
+
+            <!-- AI Insights -->
+            <div id="aiInsightsSection" style="margin-bottom:2rem"></div>
 
             <!-- All-staff KPI cards -->
             <div class="section-title" style="margin-bottom:1.25rem">Individual Performance</div>
@@ -1485,6 +1555,12 @@
                     ? 'rgba(81,207,102,0.75)'
                     : 'rgba(255,107,107,0.75)';
             });
+            // 4-week rolling average trend line
+            const rollingAvg = display.map((_, i) => {
+                const window = display.slice(Math.max(0, i - 3), i + 1);
+                const avg = window.reduce((s, d) => s + d.hours, 0) / window.length;
+                return +avg.toFixed(2);
+            });
 
             teamTrendChartInst = new Chart(
                 document.getElementById('teamTrendCanvas').getContext('2d'),
@@ -1503,14 +1579,16 @@
                             },
                             {
                                 type: 'line',
-                                label: 'Trend',
-                                data: hoursData,
-                                borderColor: 'rgba(5,191,219,0.5)',
-                                borderWidth: 2,
-                                pointRadius: 3,
+                                label: '4-Wk Rolling Avg',
+                                data: rollingAvg,
+                                borderColor: 'rgba(5,191,219,0.85)',
+                                borderWidth: 2.5,
+                                pointRadius: 4,
                                 pointBackgroundColor: '#05bfdb',
+                                pointBorderColor: '#0d1117',
+                                pointBorderWidth: 1.5,
                                 fill: false,
-                                tension: 0.3,
+                                tension: 0.4,
                                 order: 1,
                             }
                         ]
@@ -1643,6 +1721,185 @@
             `;
         }
 
+        /* ── AI INSIGHTS ENGINE ─────────────────────────────────── */
+        function generateInsights() {
+            const insights = [];
+            const weeks = sortedWeeks;
+            const recent4 = last4Weeks;
+
+            // ── Helper: get a provider's hours for a given week list
+            const provHrsInWeeks = (name, wks) =>
+                wks.reduce((s, w) => s + (providerData[name]?.[w] || 0), 0);
+
+            // ── Helper: weekly totals array (sorted)
+            const weeklyTotals = buildWeeklyTotals();
+            const last8 = weeklyTotals.slice(-8);
+
+            // ── 1. Team rolling trend direction
+            if (last8.length >= 5) {
+                const half = Math.floor(last8.length / 2);
+                const firstHalf = last8.slice(0, half).reduce((s,d)=>s+d.hours,0) / half;
+                const secHalf   = last8.slice(half).reduce((s,d)=>s+d.hours,0) / (last8.length - half);
+                const changePct = firstHalf > 0 ? (secHalf - firstHalf) / firstHalf * 100 : 0;
+                if (changePct <= -10) {
+                    insights.push({ type:'concern', icon:'📉', tag:'Team Trend',
+                        title: 'Declining Team Hours',
+                        desc: `Team hours are down ${Math.abs(changePct).toFixed(1)}% over the past 8 weeks. The rolling average has been falling — review caseloads and scheduling.` });
+                } else if (changePct >= 10) {
+                    insights.push({ type:'positive', icon:'📈', tag:'Team Trend',
+                        title: 'Team Hours Growing',
+                        desc: `Team hours are up ${changePct.toFixed(1)}% over the past 8 weeks. Strong momentum heading into the rest of the quarter.` });
+                }
+            }
+
+            // ── 2. Provider-level concerns
+            const providers = Object.keys(providerData);
+            providers.forEach(name => {
+                const wkHrs = weeks.map(w => providerData[name][w] || 0);
+
+                // Consecutive weeks below target (last 4)
+                const last4Hrs = recent4.map(w => providerData[name][w] || 0);
+                const allBelow = last4Hrs.every(h => h > 0 && h < TARGET_HRS);
+                const avg4 = last4Hrs.reduce((s,v)=>s+v,0) / (last4Hrs.filter(h=>h>0).length || 1);
+                if (allBelow && last4Hrs.filter(h=>h>0).length >= 3) {
+                    insights.push({ type:'warning', icon:'⚠️', tag: name,
+                        title: `${name.split(' ')[0]} Below Target 4 Weeks Running`,
+                        desc: `Averaging ${avg4.toFixed(1)} hrs/wk over the last 4 weeks — ${(TARGET_HRS - avg4).toFixed(1)} hrs below the ${TARGET_HRS}-hr target. May need schedule review.` });
+                }
+
+                // Significant drop from prior 4 weeks to most recent 4
+                if (recent4.length >= 4 && weeks.length >= 8) {
+                    const prior4Weeks = weeks.slice(-8, -4);
+                    const priorAvg = provHrsInWeeks(name, prior4Weeks) / 4;
+                    const currAvg  = provHrsInWeeks(name, recent4) / 4;
+                    if (priorAvg > 5 && currAvg < priorAvg * 0.7) {
+                        const drop = ((priorAvg - currAvg) / priorAvg * 100).toFixed(0);
+                        insights.push({ type:'concern', icon:'🔻', tag: name,
+                            title: `${name.split(' ')[0]}'s Hours Down ${drop}%`,
+                            desc: `Dropped from ${priorAvg.toFixed(1)} hrs/wk to ${currAvg.toFixed(1)} hrs/wk comparing the previous 4-week block to this one.` });
+                    }
+                }
+
+                // Provider went completely inactive in last 2 weeks but was active before
+                const latestIdx  = weeks.indexOf(latestWeek);
+                if (latestIdx >= 3) {
+                    const recentPair = [weeks[latestIdx - 1], weeks[latestIdx]].filter(Boolean);
+                    const priorPair  = [weeks[latestIdx - 3], weeks[latestIdx - 2]].filter(Boolean);
+                    const recentSum  = recentPair.reduce((s,w) => s + (providerData[name][w]||0), 0);
+                    const priorSum   = priorPair.reduce((s,w) => s + (providerData[name][w]||0), 0);
+                    if (priorSum > 10 && recentSum === 0) {
+                        insights.push({ type:'concern', icon:'🚫', tag: name,
+                            title: `${name.split(' ')[0]} Has No Hours — Last 2 Weeks`,
+                            desc: `Had ${priorSum.toFixed(1)} hrs in the prior 2 weeks but zero billable hours in the most recent 2 weeks. Possible LOA, schedule gap, or data lag.` });
+                    }
+                }
+            });
+
+            // ── 3. Client-level concerns (97153)
+            const { clients: heatClients, weeks: heatWeeks } = buildClientHeatmap();
+            if (heatWeeks.length >= 4) {
+                const wLen = heatWeeks.length;
+                heatClients.forEach(client => {
+                    const last2 = [heatWeeks[wLen-2], heatWeeks[wLen-1]];
+                    const prev2 = [heatWeeks[wLen-4], heatWeeks[wLen-3]];
+                    const l2sum = last2.reduce((s,w) => s + (client.weeks[w]||0), 0);
+                    const p2sum = prev2.reduce((s,w) => s + (client.weeks[w]||0), 0);
+
+                    // Client went from active to zero
+                    if (p2sum > 5 && l2sum === 0) {
+                        insights.push({ type:'concern', icon:'👤', tag: `Client ${client.id}`,
+                            title: `Client ${client.id} Inactive Last 2 Weeks`,
+                            desc: `Had ${p2sum.toFixed(1)} hrs (97153) in prior 2 weeks but zero hours recently. Possible discharge, insurance issue, or missed sessions.` });
+                    }
+                    // Big drop in client hours
+                    else if (p2sum > 5 && l2sum < p2sum * 0.5 && l2sum > 0) {
+                        const drop = ((p2sum - l2sum) / p2sum * 100).toFixed(0);
+                        insights.push({ type:'warning', icon:'📋', tag: `Client ${client.id}`,
+                            title: `Client ${client.id} Hours Down ${drop}%`,
+                            desc: `97153 hours fell from ${p2sum.toFixed(1)} to ${l2sum.toFixed(1)} comparing the last two 2-week periods.` });
+                    }
+                });
+            }
+
+            // ── 4. Quarter on-track check
+            const q = calcQuarterProgress();
+            if (q.weeksRemain > 0 && q.hrsPerWkNeeded > 0) {
+                const fmt3 = n => n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                const currTeamAvgWk = weeklyTotals.slice(-4).reduce((s,d)=>s+d.hours,0) / Math.min(4, weeklyTotals.length);
+                const provCount = Object.keys(providerData).length || 1;
+                if (currTeamAvgWk < q.hrsPerWkNeeded * 0.85) {
+                    // How much each provider needs to add per week to close the gap
+                    const gapTotal    = q.hrsPerWkNeeded - currTeamAvgWk;
+                    const perProvider = (gapTotal / provCount).toFixed(1);
+                    const hrsNeeded   = fmt3(q.needed);
+                    insights.push({ type:'concern', icon:'🚨', tag: 'Quarter Goal — Action Required',
+                        title: `${hrsNeeded} hrs still needed — here's how to get there`,
+                        desc: `10,000 hrs is the target and it must be hit. With ${q.weeksRemain} weeks left, the team needs ${q.hrsPerWkNeeded.toFixed(0)} hrs/wk — ${gapTotal.toFixed(0)} more than the current ${currTeamAvgWk.toFixed(0)} hrs/wk average. Each of the ${provCount} providers needs to add roughly ${perProvider} hrs/wk to close the gap. Focus on maximising scheduled sessions and reducing cancellations immediately.` });
+                } else if (currTeamAvgWk >= q.hrsPerWkNeeded && q.pct < 1) {
+                    insights.push({ type:'positive', icon:'✅', tag: 'Quarter Goal',
+                        title: `On pace — keep it up`,
+                        desc: `At ${(q.pct*100).toFixed(1)}% of 10,000 hrs with ${q.weeksRemain} weeks left. Current pace of ${currTeamAvgWk.toFixed(0)} hrs/wk projects to ${fmt3(q.projected)} hrs — above target. Maintain consistency.` });
+                } else if (q.pct >= 1) {
+                    insights.push({ type:'positive', icon:'🏆', tag: 'Quarter Goal',
+                        title: '10,000 hrs — Goal Reached!',
+                        desc: `The team has hit ${fmt3(q.hoursToDate)} billable hours this quarter. Outstanding work.` });
+                }
+            }
+
+            // ── 5. Supervision flags (per-provider & per-client thresholds)
+            providers.forEach(name => {
+                // calcSupervisionData expects an array of weeks and returns providerPct as a %
+                const supData = calcSupervisionData(name, recent4);
+                if (supData.prov97153 > 5 && supData.providerPct < 5) {
+                    insights.push({ type:'concern', icon:'🔍', tag: `${name} · Supervision`,
+                        title: `${name.split(' ')[0]} Supervision Below 5%`,
+                        desc: `Provider-level supervision rate is ${supData.providerPct.toFixed(1)}% over the last 4 weeks — below the required 5% threshold.` });
+                }
+                if (supData.clients && supData.clients.length) {
+                    supData.clients.forEach(c => {
+                        // c.pct is a %, c.id is the client identifier
+                        if (c.hrs97153 > 3 && c.pct < 10) {
+                            insights.push({ type:'warning', icon:'🔍', tag: `Client ${c.id} · Supervision`,
+                                title: `Client ${c.id} Supervision Below 10%`,
+                                desc: `${name.split(' ')[0]}'s supervision of client ${c.id} is ${c.pct.toFixed(1)}% — below the 10% per-client minimum.` });
+                        }
+                    });
+                }
+            });
+
+            // Cap at 12 total, prioritise concerns then warnings then positives
+            const order = { concern:0, warning:1, info:2, positive:3 };
+            return insights.sort((a,b) => order[a.type]-order[b.type]).slice(0, 12);
+        }
+
+        function renderAIInsights() {
+            const insights = generateInsights();
+            const sec = document.getElementById('aiInsightsSection');
+            if (!insights.length) { sec.innerHTML = ''; return; }
+
+            const iconMap = { concern:'🔴', warning:'🟡', positive:'🟢', info:'🔵' };
+            sec.innerHTML = `
+                <div class="insights-section">
+                    <div class="insights-header">
+                        <div class="section-title">AI Insights</div>
+                        <span class="insights-badge">Auto-generated · ${insights.length} observation${insights.length!==1?'s':''}</span>
+                    </div>
+                    <div class="insights-grid">
+                        ${insights.map(ins => `
+                            <div class="insight-card ${ins.type}">
+                                <div class="insight-icon">${ins.icon}</div>
+                                <div class="insight-body">
+                                    <div class="insight-title">${ins.title}</div>
+                                    <div class="insight-desc">${ins.desc}</div>
+                                    <span class="insight-tag">${ins.tag}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
         /* ── ALL / TEAM DASHBOARD ──────────────────────────────── */
         function renderAllDashboard() {
             hideAll();
@@ -1767,10 +2024,11 @@
                     table.appendChild(row);
                 });
 
-            /* ── Quarter progress, team trend, client heatmap ── */
+            /* ── Quarter progress, team trend, client heatmap, insights ── */
             renderQuarterProgress();
             renderTeamTrendChart();
             renderClientHeatmap();
+            renderAIInsights();
         }
 
         /* ── INDIVIDUAL DASHBOARD ──────────────────────────────── */
