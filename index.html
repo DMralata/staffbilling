@@ -1412,11 +1412,15 @@
         }
 
         function buildWeeklyTotals() {
+            // Sum ALL billable hours across every provider (not just BCBAs)
             const totals = {};
-            Object.values(providerData).forEach(weeks => {
-                Object.entries(weeks).forEach(([week, hrs]) => {
-                    totals[week] = (totals[week] || 0) + hrs;
-                });
+            allData.forEach(r => {
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                const week = getWeekNumber(r.DateOfService);
+                if (!week) return;
+                const hrs = parseFloat(r.TimeWorkedInHours) || 0;
+                totals[week] = (totals[week] || 0) + hrs;
             });
             return sortedWeeks.map(w => ({ week: w, hours: totals[w] || 0 }));
         }
@@ -1549,18 +1553,16 @@
             const weeklyTotals = buildWeeklyTotals();
             const display      = weeklyTotals.slice(-12);
             const hoursData    = display.map(d => +d.hours.toFixed(2));
-            const barColors    = display.map((d, i) => {
-                if (i === 0) return 'rgba(5,191,219,0.55)';
-                return d.hours >= display[i - 1].hours
-                    ? 'rgba(81,207,102,0.75)'
-                    : 'rgba(255,107,107,0.75)';
-            });
-            // 4-week rolling average trend line
+            // 8-week rolling average trend line
             const rollingAvg = display.map((_, i) => {
-                const window = display.slice(Math.max(0, i - 3), i + 1);
+                const window = display.slice(Math.max(0, i - 7), i + 1);
                 const avg = window.reduce((s, d) => s + d.hours, 0) / window.length;
                 return +avg.toFixed(2);
             });
+            // Blue if at/above rolling avg, red if below
+            const barColors = hoursData.map((h, i) =>
+                h >= rollingAvg[i] ? 'rgba(5,191,219,0.75)' : 'rgba(255,107,107,0.75)'
+            );
 
             teamTrendChartInst = new Chart(
                 document.getElementById('teamTrendCanvas').getContext('2d'),
@@ -1579,7 +1581,7 @@
                             },
                             {
                                 type: 'line',
-                                label: '4-Wk Rolling Avg',
+                                label: '8-Wk Rolling Avg',
                                 data: rollingAvg,
                                 borderColor: 'rgba(5,191,219,0.85)',
                                 borderWidth: 2.5,
@@ -1795,50 +1797,32 @@
                 }
             });
 
-            // ── 3. Client-level concerns (97153)
-            const { clients: heatClients, weeks: heatWeeks } = buildClientHeatmap();
-            if (heatWeeks.length >= 4) {
-                const wLen = heatWeeks.length;
-                heatClients.forEach(client => {
-                    const last2 = [heatWeeks[wLen-2], heatWeeks[wLen-1]];
-                    const prev2 = [heatWeeks[wLen-4], heatWeeks[wLen-3]];
-                    const l2sum = last2.reduce((s,w) => s + (client.weeks[w]||0), 0);
-                    const p2sum = prev2.reduce((s,w) => s + (client.weeks[w]||0), 0);
-
-                    // Client went from active to zero
-                    if (p2sum > 5 && l2sum === 0) {
-                        insights.push({ type:'concern', icon:'👤', tag: `Client ${client.id}`,
-                            title: `Client ${client.id} Inactive Last 2 Weeks`,
-                            desc: `Had ${p2sum.toFixed(1)} hrs (97153) in prior 2 weeks but zero hours recently. Possible discharge, insurance issue, or missed sessions.` });
-                    }
-                    // Big drop in client hours
-                    else if (p2sum > 5 && l2sum < p2sum * 0.5 && l2sum > 0) {
-                        const drop = ((p2sum - l2sum) / p2sum * 100).toFixed(0);
-                        insights.push({ type:'warning', icon:'📋', tag: `Client ${client.id}`,
-                            title: `Client ${client.id} Hours Down ${drop}%`,
-                            desc: `97153 hours fell from ${p2sum.toFixed(1)} to ${l2sum.toFixed(1)} comparing the last two 2-week periods.` });
-                    }
-                });
-            }
-
-            // ── 4. Quarter on-track check
+            // ── 3. Quarter on-track check (uses full-team hours from allData via buildWeeklyTotals)
             const q = calcQuarterProgress();
             if (q.weeksRemain > 0 && q.hrsPerWkNeeded > 0) {
                 const fmt3 = n => n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                const currTeamAvgWk = weeklyTotals.slice(-4).reduce((s,d)=>s+d.hours,0) / Math.min(4, weeklyTotals.length);
-                const provCount = Object.keys(providerData).length || 1;
+                // currTeamAvgWk now reflects ALL billable providers, not just BCBAs
+                const currTeamAvgWk = weeklyTotals.slice(-4).reduce((s,d)=>s+d.hours,0) / Math.min(4, weeklyTotals.slice(-4).length || 1);
+                // Count ALL unique providers billing with agreed charges in the last 4 weeks
+                const activeProviders = new Set(
+                    allData.filter(r => {
+                        const ag = parseFloat(r.ClientAgreedCharges);
+                        return !isNaN(ag) && ag > 0 && last4Weeks.includes(getWeekNumber(r.DateOfService));
+                    }).map(r => `${r.ProviderFirstName} ${r.ProviderLastName}`)
+                );
+                const provCount = activeProviders.size || 1;
+
                 if (currTeamAvgWk < q.hrsPerWkNeeded * 0.85) {
-                    // How much each provider needs to add per week to close the gap
                     const gapTotal    = q.hrsPerWkNeeded - currTeamAvgWk;
                     const perProvider = (gapTotal / provCount).toFixed(1);
                     const hrsNeeded   = fmt3(q.needed);
                     insights.push({ type:'concern', icon:'🚨', tag: 'Quarter Goal — Action Required',
                         title: `${hrsNeeded} hrs still needed — here's how to get there`,
-                        desc: `10,000 hrs is the target and it must be hit. With ${q.weeksRemain} weeks left, the team needs ${q.hrsPerWkNeeded.toFixed(0)} hrs/wk — ${gapTotal.toFixed(0)} more than the current ${currTeamAvgWk.toFixed(0)} hrs/wk average. Each of the ${provCount} providers needs to add roughly ${perProvider} hrs/wk to close the gap. Focus on maximising scheduled sessions and reducing cancellations immediately.` });
+                        desc: `10,000 hrs is the target and it must be hit. With ${q.weeksRemain} weeks left, the team needs ${q.hrsPerWkNeeded.toFixed(0)} hrs/wk total. The team is currently averaging ${currTeamAvgWk.toFixed(0)} hrs/wk across ${provCount} active providers — a gap of ${gapTotal.toFixed(0)} hrs/wk. To close it, each provider needs to add roughly ${perProvider} hrs/wk. Prioritise filling open slots, reducing cancellations, and maximising authorised hours.` });
                 } else if (currTeamAvgWk >= q.hrsPerWkNeeded && q.pct < 1) {
                     insights.push({ type:'positive', icon:'✅', tag: 'Quarter Goal',
-                        title: `On pace — keep it up`,
-                        desc: `At ${(q.pct*100).toFixed(1)}% of 10,000 hrs with ${q.weeksRemain} weeks left. Current pace of ${currTeamAvgWk.toFixed(0)} hrs/wk projects to ${fmt3(q.projected)} hrs — above target. Maintain consistency.` });
+                        title: 'On pace — keep it up',
+                        desc: `At ${(q.pct*100).toFixed(1)}% of 10,000 hrs with ${q.weeksRemain} weeks left. The team is averaging ${currTeamAvgWk.toFixed(0)} hrs/wk across ${provCount} active providers, projecting to ${fmt3(q.projected)} hrs — above target. Maintain consistency.` });
                 } else if (q.pct >= 1) {
                     insights.push({ type:'positive', icon:'🏆', tag: 'Quarter Goal',
                         title: '10,000 hrs — Goal Reached!',
