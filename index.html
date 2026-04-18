@@ -2178,7 +2178,8 @@
             document.getElementById('psychDashboard').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
-            const display4 = sortedWeeks.slice(-4);
+            const display4  = sortedWeeks.slice(-4);
+            const display12 = sortedWeeks.slice(-12);
 
             // Build per-provider, per-week client detail list
             const detailByProvider = {};
@@ -2291,12 +2292,13 @@
 
             // ── Individual provider cards ────────────────────────────
             const cards = PSYCH_PROVIDERS.map((p, idx) => {
-                const weekCounts = display4.map(w => (detailByProvider[p.name][w] || []).length);
-                const thisWeek   = (detailByProvider[p.name][latestWeek] || []).length;
-                const nonZero    = weekCounts.filter(v => v > 0);
-                const avg4       = nonZero.length ? nonZero.reduce((s,v)=>s+v,0) / nonZero.length : 0;
-                const met        = thisWeek >= p.target;
-                const totalAll   = weekCounts.reduce((s,v)=>s+v,0);
+                const weekCounts  = display4.map(w => (detailByProvider[p.name][w] || []).length);
+                const counts12    = display12.map(w => (detailByProvider[p.name][w] || []).length);
+                const thisWeek    = (detailByProvider[p.name][latestWeek] || []).length;
+                const nonZero12   = counts12.filter(v => v > 0);
+                const avg12       = nonZero12.length ? nonZero12.reduce((s,v)=>s+v,0) / nonZero12.length : 0;
+                const met         = thisWeek >= p.target;
+                const totalAll    = weekCounts.reduce((s,v)=>s+v,0);
                 const barColors  = weekCounts.map(v => v >= p.target ? 'rgba(81,207,102,0.75)' : 'rgba(255,107,107,0.7)');
                 const trendLine  = weekCounts.map((_, i) => {
                     const sl = weekCounts.slice(0, i+1);
@@ -2327,8 +2329,8 @@
                                 <div class="psych-kpi-label">This week</div>
                             </div>
                             <div class="psych-kpi">
-                                <div class="psych-kpi-val" style="color:var(--accent)">${avg4.toFixed(1)}</div>
-                                <div class="psych-kpi-label">4-wk avg</div>
+                                <div class="psych-kpi-val" style="color:var(--accent)">${avg12.toFixed(1)}</div>
+                                <div class="psych-kpi-label">12-wk avg</div>
                             </div>
                             <div class="psych-kpi">
                                 <div class="psych-kpi-val">${p.target}</div>
@@ -2386,21 +2388,21 @@
                 });
             });
 
-            // Charts
+            // Charts — 12 weeks of data, KPI boxes reference last 4
             PSYCH_PROVIDERS.forEach((p, idx) => {
-                const weekCounts = display4.map(w => (detailByProvider[p.name][w] || []).length);
+                const weekCounts = display12.map(w => (detailByProvider[p.name][w] || []).length);
                 const trendLine  = weekCounts.map((_, i) => {
-                    const sl = weekCounts.slice(0, i+1);
+                    const sl = weekCounts.slice(Math.max(0, i-3), i+1); // 4-week rolling
                     return +(sl.reduce((s,v)=>s+v,0) / sl.length).toFixed(2);
                 });
                 const barColors = weekCounts.map(v => v >= p.target ? 'rgba(81,207,102,0.75)' : 'rgba(255,107,107,0.7)');
                 new Chart(document.getElementById(`psychChart${idx}`).getContext('2d'), {
                     data: {
-                        labels: display4,
+                        labels: display12,
                         datasets: [
-                            { type:'bar',  label:'Diagnoses',       data:weekCounts,               backgroundColor:barColors, borderRadius:5, borderSkipped:false, order:3 },
-                            { type:'line', label:'Trend',            data:trendLine,                borderColor:'rgba(5,191,219,0.85)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#05bfdb', fill:false, tension:0.3, order:2 },
-                            { type:'line', label:`Target (${p.target})`, data:display4.map(()=>p.target), borderColor:'rgba(81,207,102,0.5)', borderWidth:1.5, borderDash:[6,3], pointRadius:0, fill:false, order:1 },
+                            { type:'bar',  label:'Diagnoses',            data:weekCounts,                  backgroundColor:barColors, borderRadius:5, borderSkipped:false, order:3 },
+                            { type:'line', label:'4-Wk Rolling Avg',     data:trendLine,                   borderColor:'rgba(5,191,219,0.85)', borderWidth:2, pointRadius:4, pointBackgroundColor:'#05bfdb', fill:false, tension:0.3, order:2 },
+                            { type:'line', label:`Target (${p.target})`, data:display12.map(()=>p.target), borderColor:'rgba(81,207,102,0.5)', borderWidth:1.5, borderDash:[6,3], pointRadius:0, fill:false, order:1 },
                         ]
                     },
                     options: {
