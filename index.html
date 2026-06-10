@@ -8,7 +8,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap');
-
         :root {
             --primary: #0a4d68;
             --secondary: #088395;
@@ -21,9 +20,7 @@
             --text-dim: #8b949e;
             --border: #30363d;
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             font-family: 'Outfit', sans-serif;
             background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
@@ -32,7 +29,6 @@
             position: relative;
             overflow-x: hidden;
         }
-
         body::before {
             content: '';
             position: fixed;
@@ -44,12 +40,10 @@
             animation: grid-drift 60s linear infinite;
             z-index: 0;
         }
-
         @keyframes grid-drift {
             0%   { transform: translate(0,0); }
             100% { transform: translate(30px,30px); }
         }
-
         /* ─── SELECTION SCREEN ──────────────────────────────────── */
         #selectionScreen {
             display: flex;
@@ -60,7 +54,6 @@
             position: relative;
             z-index: 1;
         }
-
         .selection-card {
             background: var(--bg-light);
             border: 1px solid var(--border);
@@ -71,12 +64,10 @@
             text-align: center;
             animation: slide-up 0.6s ease-out;
         }
-
         @keyframes slide-up {
             from { opacity: 0; transform: translateY(40px); }
             to   { opacity: 1; transform: translateY(0); }
         }
-
         .selection-card h1 {
             font-family: 'JetBrains Mono', monospace;
             font-size: 1.85rem;
@@ -87,14 +78,12 @@
             background-clip: text;
             margin-bottom: 0.4rem;
         }
-
         .selection-card .subtitle {
             font-size: 0.85rem;
             color: var(--text-dim);
             font-family: 'JetBrains Mono', monospace;
             margin-bottom: 2.5rem;
         }
-
         .select-label {
             display: block;
             text-align: left;
@@ -105,7 +94,6 @@
             letter-spacing: 0.07em;
             margin-bottom: 0.5rem;
         }
-
         .employee-select {
             width: 100%;
             padding: 0.85rem 2.5rem 0.85rem 1rem;
@@ -124,10 +112,8 @@
             background-repeat: no-repeat;
             background-position: right 1rem center;
         }
-
         .employee-select:focus { border-color: var(--accent); }
         .employee-select option { background: var(--bg-dark); color: var(--text); }
-
         .btn-primary {
             width: 100%;
             padding: 0.9rem;
@@ -142,10 +128,8 @@
             transition: all 0.2s;
             letter-spacing: 0.02em;
         }
-
         .btn-primary:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
         .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
-
         .loading-text {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.95rem;
@@ -153,12 +137,10 @@
             padding: 1rem 0 2rem;
             animation: pulse 1.5s ease-in-out infinite;
         }
-
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50%       { opacity: 0.4; }
         }
-
         /* ─── PASSWORD MODAL ────────────────────────────────────── */
         .modal-overlay {
             display: none;
@@ -170,9 +152,7 @@
             align-items: center;
             justify-content: center;
         }
-
         .modal-overlay.active { display: flex; }
-
         .modal-card {
             background: var(--bg-light);
             border: 1px solid var(--border);
@@ -182,26 +162,22 @@
             width: 90%;
             animation: modal-in 0.25s ease-out;
         }
-
         @keyframes modal-in {
             from { opacity: 0; transform: scale(0.92) translateY(16px); }
             to   { opacity: 1; transform: scale(1) translateY(0); }
         }
-
         .modal-card h2 {
             font-family: 'JetBrains Mono', monospace;
             font-size: 1.2rem;
             color: var(--accent);
             margin-bottom: 0.4rem;
         }
-
         .modal-name {
             font-size: 1.05rem;
             font-weight: 600;
             color: var(--text);
             margin-bottom: 1.75rem;
         }
-
         .password-input {
             width: 100%;
             padding: 0.85rem 1rem;
@@ -215,14 +191,11 @@
             margin-bottom: 0.75rem;
             transition: border-color 0.2s;
         }
-
         .password-input:focus { border-color: var(--accent); }
-
         .password-input.shake {
             border-color: var(--warning);
             animation: shake 0.35s ease;
         }
-
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             20%       { transform: translateX(-8px); }
@@ -230,7 +203,6 @@
             60%       { transform: translateX(-6px); }
             80%       { transform: translateX(6px); }
         }
-
         .modal-error {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.8rem;
@@ -239,11 +211,8 @@
             opacity: 0;
             transition: opacity 0.2s;
         }
-
         .modal-error.show { opacity: 1; }
-
         .modal-buttons { display: flex; gap: 0.75rem; }
-
         .btn-ghost {
             flex: 1;
             padding: 0.8rem;
@@ -256,9 +225,7 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-
         .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
-
         /* ─── SHARED DASHBOARD CHROME ───────────────────────────── */
         .dash-view {
             display: none;
@@ -267,14 +234,11 @@
             z-index: 1;
             animation: fade-in 0.5s ease-out;
         }
-
         @keyframes fade-in {
             from { opacity: 0; transform: translateY(16px); }
             to   { opacity: 1; transform: translateY(0); }
         }
-
         .dash-container { max-width: 1400px; margin: 0 auto; }
-
         .dash-header {
             display: flex;
             align-items: flex-start;
@@ -283,7 +247,6 @@
             margin-bottom: 2.5rem;
             flex-wrap: wrap;
         }
-
         .dash-header-left h1 {
             font-family: 'JetBrains Mono', monospace;
             font-size: 2.2rem;
@@ -295,13 +258,11 @@
             line-height: 1.1;
             margin-bottom: 0.3rem;
         }
-
         .dash-subtitle {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.8rem;
             color: var(--text-dim);
         }
-
         .btn-back {
             padding: 0.65rem 1.2rem;
             background: transparent;
@@ -315,9 +276,7 @@
             white-space: nowrap;
             flex-shrink: 0;
         }
-
         .btn-back:hover { background: rgba(5,191,219,0.1); }
-
         /* ─── SECTION CHROME ────────────────────────────────────── */
         .section-title {
             font-family: 'JetBrains Mono', monospace;
@@ -329,7 +288,6 @@
             gap: 0.75rem;
             color: var(--text);
         }
-
         .section-title::before {
             content: '';
             width: 4px; height: 20px;
@@ -337,7 +295,6 @@
             border-radius: 2px;
             flex-shrink: 0;
         }
-
         /* ─── SUMMARY STATS ROW (ALL view) ──────────────────────── */
         .summary-stats {
             display: grid;
@@ -345,7 +302,6 @@
             gap: 1.25rem;
             margin-bottom: 2rem;
         }
-
         .stat-card {
             background: var(--bg-light);
             border: 1px solid var(--border);
@@ -354,7 +310,6 @@
             position: relative;
             overflow: hidden;
         }
-
         .stat-card::before {
             content: '';
             position: absolute;
@@ -362,7 +317,6 @@
             height: 3px;
             background: linear-gradient(90deg, var(--accent), var(--secondary));
         }
-
         .stat-label {
             font-size: 0.75rem;
             color: var(--text-dim);
@@ -371,20 +325,17 @@
             font-weight: 600;
             margin-bottom: 0.5rem;
         }
-
         .stat-value {
             font-family: 'JetBrains Mono', monospace;
             font-size: 2.4rem;
             font-weight: 700;
             line-height: 1;
         }
-
         .stat-sub {
             font-size: 0.8rem;
             color: var(--text-dim);
             margin-top: 0.3rem;
         }
-
         /* ─── KPI GRID (ALL view) ───────────────────────────────── */
         .kpi-grid {
             display: grid;
@@ -392,7 +343,6 @@
             gap: 1.25rem;
             margin-bottom: 2rem;
         }
-
         .kpi-card {
             background: var(--bg-light);
             border: 1px solid var(--border);
@@ -402,13 +352,11 @@
             overflow: hidden;
             transition: all 0.3s;
         }
-
         .kpi-card:hover {
             transform: translateY(-3px);
             border-color: var(--accent);
             box-shadow: 0 8px 24px rgba(5,191,219,0.15);
         }
-
         .kpi-card::before {
             content: '';
             position: absolute;
@@ -419,9 +367,7 @@
             transform-origin: left;
             transition: transform 0.3s;
         }
-
         .kpi-card:hover::before { transform: scaleX(1); }
-
         .kpi-provider-name {
             font-weight: 600;
             font-size: 1rem;
@@ -431,7 +377,6 @@
             gap: 0.5rem;
             flex-wrap: wrap;
         }
-
         .status-badge {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.68rem;
@@ -442,29 +387,24 @@
             letter-spacing: 0.05em;
             display: inline-block;
         }
-
         .status-below   { background: rgba(255,107,107,0.15); color: var(--warning); border: 1px solid var(--warning); }
         .status-meeting { background: rgba(81,207,102,0.15);  color: var(--success); border: 1px solid var(--success); }
-
         .kpi-hours-display {
             display: flex;
             align-items: baseline;
             gap: 0.4rem;
             margin-bottom: 0.85rem;
         }
-
         .kpi-hours-value {
             font-family: 'JetBrains Mono', monospace;
             font-size: 2.8rem;
             font-weight: 700;
             line-height: 1;
         }
-
         .kpi-hours-label {
             font-size: 0.85rem;
             color: var(--text-dim);
         }
-
         .kpi-client-row {
             margin-top: 0.85rem;
             padding-top: 0.85rem;
@@ -475,14 +415,12 @@
             align-items: center;
             gap: 0.4rem;
         }
-
         .kpi-client-val {
             font-family: 'JetBrains Mono', monospace;
             font-weight: 700;
             font-size: 1rem;
             color: var(--accent);
         }
-
         /* ─── INDIVIDUAL METRICS ROW ────────────────────────────── */
         .metrics-row {
             display: grid;
@@ -490,7 +428,6 @@
             gap: 1.25rem;
             margin-bottom: 2rem;
         }
-
         .metric-card {
             background: var(--bg-light);
             border: 1px solid var(--border);
@@ -500,9 +437,7 @@
             overflow: hidden;
             transition: all 0.3s;
         }
-
         .metric-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-
         .metric-card::before {
             content: '';
             position: absolute;
@@ -510,7 +445,6 @@
             height: 3px;
             background: linear-gradient(90deg, var(--accent), var(--secondary));
         }
-
         .metric-label {
             font-size: 0.75rem;
             color: var(--text-dim);
@@ -519,7 +453,6 @@
             font-weight: 600;
             margin-bottom: 0.6rem;
         }
-
         .metric-value {
             font-family: 'JetBrains Mono', monospace;
             font-size: 2.6rem;
@@ -527,9 +460,7 @@
             line-height: 1;
             margin-bottom: 0.3rem;
         }
-
         .metric-sub { font-size: 0.82rem; color: var(--text-dim); }
-
         /* progress bar */
         .progress-bar-container {
             width: 100%; height: 7px;
@@ -538,7 +469,6 @@
             overflow: hidden;
             margin: 0.85rem 0 0.4rem;
         }
-
         .progress-bar {
             height: 100%;
             border-radius: 4px;
@@ -546,19 +476,16 @@
             position: relative;
             overflow: hidden;
         }
-
         .progress-bar::after {
             content: '';
             position: absolute; inset: 0;
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
             animation: shimmer 2s infinite;
         }
-
         @keyframes shimmer {
             0%   { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
         }
-
         /* ─── CHART ─────────────────────────────────────────────── */
         .chart-section {
             background: var(--bg-light);
@@ -567,9 +494,7 @@
             padding: 2rem;
             margin-bottom: 2rem;
         }
-
         .chart-wrapper { position: relative; height: 280px; }
-
         /* ─── HEATMAP ───────────────────────────────────────────── */
         .heatmap-section {
             background: var(--bg-light);
@@ -578,16 +503,13 @@
             padding: 2rem;
             margin-bottom: 2rem;
         }
-
         .heatmap-scroll { overflow-x: auto; margin-top: 0.5rem; }
-
         .heatmap-table {
             border-collapse: separate;
             border-spacing: 4px;
             font-family: 'JetBrains Mono', monospace;
             min-width: 100%;
         }
-
         .heatmap-table th {
             font-size: 0.68rem;
             font-weight: 600;
@@ -600,7 +522,6 @@
             border-radius: 4px;
             white-space: nowrap;
         }
-
         .heatmap-table td {
             padding: 0.85rem 0.6rem;
             text-align: center;
@@ -610,9 +531,7 @@
             transition: all 0.2s;
             white-space: nowrap;
         }
-
         .heatmap-table td:hover { transform: scale(1.06); z-index: 10; position: relative; }
-
         .heat-empty  { background: rgba(255,255,255,0.02); color: var(--text-dim); }
         .heat-0      { background: rgba(239,68,68,0.1);    color: #ef4444; }
         .heat-1      { background: rgba(239,68,68,0.3);    color: #ef4444; }
@@ -620,7 +539,6 @@
         .heat-3      { background: rgba(251,191,36,0.55);  color: #f59e0b; }
         .heat-4      { background: rgba(34,197,94,0.45);   color: #22c55e; }
         .heat-target { background: linear-gradient(135deg, rgba(34,197,94,0.85), rgba(22,163,74,1)); color: white; font-weight: 700; border: 2px solid #16a34a; }
-
         .legend {
             display: flex;
             align-items: center;
@@ -633,10 +551,8 @@
             flex-wrap: wrap;
             color: var(--text-dim);
         }
-
         .legend-item { display: flex; align-items: center; gap: 0.4rem; }
         .legend-box  { width: 30px; height: 18px; border-radius: 4px; }
-
         /* ─── ERROR ─────────────────────────────────────────────── */
         .error-msg {
             background: rgba(255,107,107,0.08);
@@ -648,7 +564,6 @@
             font-size: 0.85rem;
             margin-top: 1rem;
         }
-
         /* ─── QUARTER PROGRESS ─────────────────────────────────── */
         .quarter-progress-section {
             background: var(--bg-light);
@@ -657,7 +572,6 @@
             padding: 2rem;
             margin-bottom: 2rem;
         }
-
         .quarter-badge {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.72rem;
@@ -669,7 +583,6 @@
             font-weight: 600;
             white-space: nowrap;
         }
-
         .quarter-big-progress {
             width: 100%;
             height: 26px;
@@ -678,7 +591,6 @@
             overflow: hidden;
             margin-bottom: 0.6rem;
         }
-
         .quarter-big-progress-fill {
             height: 100%;
             border-radius: 13px;
@@ -686,21 +598,18 @@
             position: relative;
             overflow: hidden;
         }
-
         .quarter-big-progress-fill::after {
             content: '';
             position: absolute; inset: 0;
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
             animation: shimmer 2.5s infinite;
         }
-
         .quarter-stats-row {
             display: flex;
             gap: 2rem;
             flex-wrap: wrap;
             margin-top: 0.75rem;
         }
-
         .quarter-stat-label {
             font-size: 0.72rem;
             color: var(--text-dim);
@@ -709,13 +618,11 @@
             font-weight: 600;
             margin-bottom: 0.2rem;
         }
-
         .quarter-stat-value {
             font-family: 'JetBrains Mono', monospace;
             font-size: 1.25rem;
             font-weight: 700;
         }
-
         /* ─── WoW GRID ──────────────────────────────────────────── */
         .wow-grid {
             display: grid;
@@ -723,7 +630,6 @@
             gap: 0.5rem;
             margin-top: 1.25rem;
         }
-
         .wow-row {
             display: flex;
             justify-content: space-between;
@@ -733,10 +639,8 @@
             border: 1px solid var(--border);
             background: rgba(255,255,255,0.02);
         }
-
         .wow-name  { font-weight: 600; color: var(--text); font-size: 0.85rem; }
         .wow-hours { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--text-dim); margin-top: 0.1rem; }
-
         .wow-badge {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.68rem;
@@ -746,12 +650,10 @@
             white-space: nowrap;
             flex-shrink: 0;
         }
-
         .wow-up   { background: rgba(5,191,219,0.12);   color: var(--accent);  border: 1px solid rgba(5,191,219,0.3); }
         .wow-down { background: rgba(255,107,107,0.12); color: var(--warning); border: 1px solid rgba(255,107,107,0.3); }
         .wow-new  { background: rgba(81,207,102,0.12);  color: var(--success); border: 1px solid rgba(81,207,102,0.3); }
         .wow-gone { background: rgba(255,107,107,0.12); color: var(--warning); border: 1px solid rgba(255,107,107,0.3); }
-
         /* ─── AI INSIGHTS SECTION ─────────────────────────────── */
         .insights-section {
             background: var(--bg-light);
@@ -818,7 +720,6 @@
             background: rgba(255,255,255,0.05);
             color: var(--text-dim);
         }
-
         /* ─── PSYCHOLOGY DASHBOARD ─────────────────────────────── */
         .psych-grid {
             display: grid;
@@ -906,7 +807,6 @@
         .pw-met    { background: rgba(81,207,102,0.18); color: var(--success); border: 1px solid rgba(81,207,102,0.3); }
         .pw-missed { background: rgba(255,107,107,0.14); color: var(--warning); border: 1px solid rgba(255,107,107,0.25); }
         .pw-zero   { background: rgba(255,255,255,0.04); color: var(--text-dim); border: 1px solid var(--border); }
-
         /* ─── SUPERVISION SECTION ──────────────────────────────── */
         .supervision-section {
             background: var(--bg-light);
@@ -915,14 +815,12 @@
             padding: 2rem;
             margin-bottom: 2rem;
         }
-
         .supervision-summary {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.25rem;
             margin-bottom: 1.75rem;
         }
-
         .supervision-stat {
             background: var(--bg-dark);
             border: 1px solid var(--border);
@@ -931,18 +829,15 @@
             position: relative;
             overflow: hidden;
         }
-
         .supervision-stat::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0;
             height: 3px;
         }
-
         .supervision-stat.good::before  { background: var(--success); }
         .supervision-stat.warn::before  { background: var(--warning); }
         .supervision-stat.neutral::before { background: linear-gradient(90deg, var(--accent), var(--secondary)); }
-
         .supervision-stat-label {
             font-size: 0.75rem;
             color: var(--text-dim);
@@ -951,7 +846,6 @@
             font-weight: 600;
             margin-bottom: 0.5rem;
         }
-
         .supervision-stat-value {
             font-family: 'JetBrains Mono', monospace;
             font-size: 2.4rem;
@@ -959,12 +853,10 @@
             line-height: 1;
             margin-bottom: 0.3rem;
         }
-
         .supervision-stat-sub {
             font-size: 0.8rem;
             color: var(--text-dim);
         }
-
         .supervision-table {
             width: 100%;
             border-collapse: separate;
@@ -972,7 +864,6 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.85rem;
         }
-
         .supervision-table thead th {
             font-size: 0.7rem;
             font-weight: 600;
@@ -984,54 +875,42 @@
             background: rgba(255,255,255,0.02);
             border-radius: 4px;
         }
-
         .supervision-table thead th:not(:first-child) { text-align: center; }
-
         .supervision-table tbody tr {
             transition: all 0.15s;
         }
-
         .supervision-table tbody td {
             padding: 0.75rem;
             background: rgba(255,255,255,0.02);
             border-top: 1px solid transparent;
             border-bottom: 1px solid transparent;
         }
-
         .supervision-table tbody td:first-child {
             border-left: 1px solid transparent;
             border-radius: 8px 0 0 8px;
         }
-
         .supervision-table tbody td:last-child {
             border-right: 1px solid transparent;
             border-radius: 0 8px 8px 0;
             text-align: center;
         }
-
         .supervision-table tbody td:not(:first-child) { text-align: center; }
-
         .supervision-table tbody tr:hover td {
             background: rgba(5,191,219,0.05);
             border-color: rgba(5,191,219,0.15);
         }
-
         .supervision-table tbody tr.row-warn td {
             background: rgba(255,107,107,0.06);
         }
-
         .supervision-table tbody tr.row-warn:hover td {
             background: rgba(255,107,107,0.1);
         }
-
         .pct-bar-cell { min-width: 120px; }
-
         .pct-bar-wrap {
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
-
         .pct-bar-bg {
             flex: 1;
             height: 6px;
@@ -1039,20 +918,17 @@
             border-radius: 3px;
             overflow: hidden;
         }
-
         .pct-bar-fill {
             height: 100%;
             border-radius: 3px;
             transition: width 0.8s ease-out;
         }
-
         .pct-bar-label {
             font-size: 0.78rem;
             font-weight: 700;
             min-width: 38px;
             text-align: right;
         }
-
         /* ─── ASSESSMENT BANNER ─────────────────────────────────── */
         .assessment-banner {
             display: flex;
@@ -1124,7 +1000,21 @@
         .chip-count.chip-met    { background: rgba(81,207,102,0.18); color: var(--success); border: 1px solid rgba(81,207,102,0.3); }
         .chip-count.chip-missed { background: rgba(255,107,107,0.15); color: var(--warning); border: 1px solid rgba(255,107,107,0.25); }
         .chip-count.chip-zero   { background: rgba(255,255,255,0.04); color: var(--text-dim); border: 1px solid var(--border); }
-
+        /* ─── WEEKLY ACTIONS ────────────────────────────────────── */
+        .action-item { border-left: 3px solid; border-radius: 0; padding: 0.7rem 1rem; margin-bottom: 0.6rem; }
+        .action-red   { border-color: var(--warning); background: rgba(255,107,107,0.07); }
+        .action-amber { border-color: #f59e0b; background: rgba(245,158,11,0.07); }
+        .action-title { font-weight: 600; font-size: 0.92rem; color: var(--text); }
+        .action-sub   { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.15rem; line-height: 1.45; }
+        .actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-top: 1.5rem; }
+        .actions-panel { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.4rem; }
+        .actions-panel-title { font-size: 0.92rem; font-weight: 600; color: var(--text); margin-bottom: 0.2rem; }
+        .actions-panel-sub { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.85rem; }
+        .actions-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-family: 'JetBrains Mono', monospace; }
+        .actions-table th { text-align: left; color: var(--text-dim); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.35rem 0.5rem; font-weight: 600; }
+        .actions-table td { padding: 0.42rem 0.5rem; border-top: 1px solid var(--border); white-space: nowrap; }
+        .actions-table .num { text-align: right; }
+        .actions-table th.num { text-align: right; }
         /* ─── RESPONSIVE ────────────────────────────────────────── */
         @media (max-width: 768px) {
             .dash-view { padding: 1rem; }
@@ -1136,15 +1026,12 @@
     </style>
 </head>
 <body>
-
     <!-- ═══ SELECTION SCREEN ════════════════════════════════════ -->
     <div id="selectionScreen">
         <div class="selection-card">
             <h1>Staff Billing<br>Dashboard</h1>
             <div class="subtitle">All Procedure Codes · Live Data</div>
-
             <div id="selectionLoading" class="loading-text">Loading…</div>
-
             <div id="selectionContent" style="display:none">
                 <label class="select-label" for="employeeSelect">Select Your Name</label>
                 <select class="employee-select" id="employeeSelect">
@@ -1155,7 +1042,6 @@
             </div>
         </div>
     </div>
-
     <!-- ═══ PASSWORD MODAL ══════════════════════════════════════ -->
     <div class="modal-overlay" id="passwordModal">
         <div class="modal-card">
@@ -1175,11 +1061,9 @@
             </div>
         </div>
     </div>
-
     <!-- ═══ ALL / TEAM DASHBOARD ════════════════════════════════ -->
     <div class="dash-view" id="allDashboard">
         <div class="dash-container">
-
             <div class="dash-header">
                 <div class="dash-header-left">
                     <h1>Full Team Dashboard</h1>
@@ -1187,16 +1071,12 @@
                 </div>
                 <button class="btn-back" id="allBackBtn">← Switch View</button>
             </div>
-
             <!-- Assessment accountability banner -->
             <div id="assessmentBanner"></div>
-
             <!-- Summary row -->
             <div class="summary-stats" id="teamSummaryStats"></div>
-
             <!-- Quarter progress to 10k hours -->
             <div class="quarter-progress-section" id="quarterProgressSection"></div>
-
             <!-- Team WoW trend chart -->
             <div class="chart-section" style="margin-bottom:2rem">
                 <div class="section-title">Team Billable Hours — Week over Week</div>
@@ -1205,7 +1085,6 @@
                 </div>
                 <div class="wow-grid" id="wowGrid"></div>
             </div>
-
             <!-- Client hours heatmap -->
             <div class="heatmap-section" style="margin-bottom:2rem">
                 <div class="section-title">Client Hours Heatmap (97153) · Last 12 Weeks</div>
@@ -1214,14 +1093,11 @@
                 </div>
                 <div class="legend" id="clientHeatmapLegend"></div>
             </div>
-
             <!-- AI Insights -->
             <div id="aiInsightsSection" style="margin-bottom:2rem"></div>
-
             <!-- All-staff KPI cards -->
             <div class="section-title" style="margin-bottom:1.25rem">Individual Performance</div>
             <div class="kpi-grid" id="teamKpiGrid"></div>
-
             <!-- Full heatmap -->
             <div class="heatmap-section">
                 <div class="section-title">Team Weekly Hours Heatmap</div>
@@ -1237,10 +1113,10 @@
                     <div class="legend-item"><div class="legend-box heat-target" style="border:2px solid #16a34a"></div><span>25+ hrs (Target Met)</span></div>
                 </div>
             </div>
-
+            <!-- This week's actions -->
+            <div class="heatmap-section" id="weeklyActionsSection" style="margin-top:2rem"></div>
         </div>
     </div>
-
     <!-- ═══ PSYCHOLOGY DASHBOARD ════════════════════════════════ -->
     <div class="dash-view" id="psychDashboard">
         <div class="dash-container" style="max-width:1000px">
@@ -1254,11 +1130,9 @@
             <div id="psychContent"></div>
         </div>
     </div>
-
     <!-- ═══ INDIVIDUAL DASHBOARD ════════════════════════════════ -->
     <div class="dash-view" id="individualDashboard">
         <div class="dash-container" style="max-width:1200px">
-
             <div class="dash-header">
                 <div class="dash-header-left">
                     <h1 id="dashProviderName"></h1>
@@ -1266,16 +1140,13 @@
                 </div>
                 <button class="btn-back" id="backBtn">← Switch Employee</button>
             </div>
-
             <div class="metrics-row" id="metricsRow"></div>
-
             <div class="chart-section">
                 <div class="section-title">Weekly Hours Trend</div>
                 <div class="chart-wrapper">
                     <canvas id="trendChart"></canvas>
                 </div>
             </div>
-
             <!-- Supervision compliance -->
             <div class="supervision-section">
                 <div class="section-title">97155 Supervision Compliance · Last 4 Weeks</div>
@@ -1284,7 +1155,6 @@
                     <table class="supervision-table" id="supervisionTable"></table>
                 </div>
             </div>
-
             <div class="heatmap-section">
                 <div class="section-title">Week-by-Week Breakdown</div>
                 <div class="heatmap-scroll">
@@ -1299,10 +1169,8 @@
                     <div class="legend-item"><div class="legend-box heat-target" style="border:2px solid #16a34a"></div><span>25+ hrs (Target Met)</span></div>
                 </div>
             </div>
-
         </div>
     </div>
-
     <script>
         /* ── CONFIG ────────────────────────────────────────────── */
         const SHEET_ID   = '1IwjOdgUG-gHzaQdfwxyUtIcpkDFyFKBylfHhVJvtTe0';
@@ -1319,7 +1187,6 @@
             { name: 'Katy Sampson',           target: 2 },
         ];
         const PSYCH_CODE = '96136';
-
         /* ── STATE ─────────────────────────────────────────────── */
         let allData      = [];
         let passwordMap  = {};
@@ -1332,7 +1199,6 @@
         let latestWeek   = '';
         let trendChart            = null;
         let teamTrendChartInst    = null;
-
         /* ── CSV PARSING ───────────────────────────────────────── */
         function parseCSV(csv) {
             const lines = csv.trim().split('\n');
@@ -1346,7 +1212,6 @@
                 }, {});
             });
         }
-
         function splitLine(line) {
             const out = []; let cur = '', inQ = false;
             for (const ch of line) {
@@ -1357,7 +1222,6 @@
             out.push(cur);
             return out;
         }
-
         function getWeekNumber(dateStr) {
             const d = new Date(dateStr);
             if (isNaN(d)) return null;
@@ -1366,7 +1230,6 @@
             const y = new Date(d.getFullYear(), 0, 1);
             return `${d.getFullYear()}-W${String(Math.ceil((((d-y)/86400000)+1)/7)).padStart(2,'0')}`;
         }
-
         /* ── CLIENT NAME MAP ───────────────────────────────────── */
         function buildClientNameMap(data) {
             if (!data.length) return;
@@ -1386,13 +1249,11 @@
                 if (initials) clientNames[id] = initials;
             });
         }
-
         // Returns "ID · FFLL" if we have a name, otherwise just "ID"
         function clientLabel(id) {
             const init = clientNames[id];
             return init ? `${id} · ${init}` : id;
         }
-
         /* ── DATA PROCESSING ───────────────────────────────────── */
         function processData(data) {
             const qualified = new Set(
@@ -1402,7 +1263,6 @@
             );
             const EXCLUDED = new Set(['Nicole Dutton', 'Anna Morgan']);
             const result = {};
-
             data.forEach(row => {
                 const ag = parseFloat(row.ClientAgreedCharges);
                 if (isNaN(ag) || ag <= 0) return;
@@ -1415,16 +1275,13 @@
                 if (!result[p]) result[p] = {};
                 result[p][week] = (result[p][week] || 0) + hrs;
             });
-
             return result;
         }
-
         function calcAvg(weeks, targetWeeks) {
             let total = 0, cnt = 0;
             targetWeeks.forEach(w => { if (weeks[w]) { total += weeks[w]; cnt++; } });
             return cnt > 0 ? total / cnt : 0;
         }
-
         function calcClients(provider, week) {
             return new Set(
                 allData
@@ -1436,16 +1293,13 @@
                     .map(r => r.ClientId).filter(Boolean)
             ).size;
         }
-
         function calcTotal(weeks, targetWeeks) {
             return targetWeeks.reduce((sum, w) => sum + (weeks[w] || 0), 0);
         }
-
         function calcSupervisionData(provider, targetWeeks) {
             // Numerator:   this BCBA's 97155 hrs per client
             // Denominator: ALL providers' 97153 hrs for that same client
             // (technicians bill 97153; BCBA covers with 97155 supervision)
-
             // Step 1 — find clients this BCBA has billed 97155 for
             const bcbaClients = new Set(
                 allData
@@ -1459,12 +1313,10 @@
                     .map(r => r.ClientId)
                     .filter(Boolean)
             );
-
             const clientMap = {};
             bcbaClients.forEach(cid => {
                 clientMap[cid] = { hrs97153: 0, hrs97155: 0 };
             });
-
             // Step 2 — for those clients, sum ALL 97153 hrs from any provider
             allData.forEach(r => {
                 const cid  = r.ClientId;
@@ -1474,7 +1326,6 @@
                 const hrs = parseFloat(r.TimeWorkedInHours) || 0;
                 if (r.ProcedureCode === '97153') clientMap[cid].hrs97153 += hrs;
             });
-
             // Step 3 — sum this BCBA's 97155 hrs per client
             allData.forEach(r => {
                 const pname = `${r.ProviderFirstName} ${r.ProviderLastName}`;
@@ -1486,7 +1337,6 @@
                 const hrs = parseFloat(r.TimeWorkedInHours) || 0;
                 if (r.ProcedureCode === '97155') clientMap[cid].hrs97155 += hrs;
             });
-
             const clients = Object.entries(clientMap)
                 .map(([id, d]) => ({
                     id,
@@ -1495,10 +1345,8 @@
                     pct:      d.hrs97153 > 0 ? (d.hrs97155 / d.hrs97153) * 100 : 0,
                 }))
                 .sort((a, b) => a.pct - b.pct); // worst first
-
             const totalProv97153 = clients.reduce((s, c) => s + c.hrs97153, 0);
             const totalProv97155 = clients.reduce((s, c) => s + c.hrs97155, 0);
-
             return {
                 prov97153:            totalProv97153,
                 prov97155:            totalProv97155,
@@ -1507,7 +1355,6 @@
                 clientsMeetingTarget: clients.filter(c => c.pct >= 10).length,
             };
         }
-
         function heatClass(hrs) {
             if (hrs === 0)          return 'heat-empty';
             if (hrs >= TARGET_HRS)  return 'heat-target';
@@ -1517,7 +1364,6 @@
             if (hrs >= 5)           return 'heat-1';
             return 'heat-0';
         }
-
         /* ── SCREEN MANAGEMENT ─────────────────────────────────── */
         function hideAll() {
             document.getElementById('selectionScreen').style.display    = 'none';
@@ -1525,32 +1371,26 @@
             document.getElementById('psychDashboard').style.display     = 'none';
             document.getElementById('individualDashboard').style.display = 'none';
         }
-
         function showSelectionScreen() {
             hideAll();
             document.getElementById('selectionScreen').style.display = 'flex';
-
             const select = document.getElementById('employeeSelect');
             select.innerHTML = '<option value="">— choose name —</option>';
-
             // ALL option at top, visually distinct
             const allOpt = document.createElement('option');
             allOpt.value = ALL_KEY;
             allOpt.textContent = '👥 ALL — Full Team View';
             select.appendChild(allOpt);
-
             // Psychology department option
             const psychOpt = document.createElement('option');
             psychOpt.value = PSYCH_KEY;
             psychOpt.textContent = '🧠 Psychology Department';
             select.appendChild(psychOpt);
-
             // Separator
             const sep = document.createElement('option');
             sep.disabled = true;
             sep.textContent = '──────────────────────';
             select.appendChild(sep);
-
             // Individual employees
             Object.keys(providerData).sort().forEach(name => {
                 const opt = document.createElement('option');
@@ -1558,13 +1398,11 @@
                 opt.textContent = name;
                 select.appendChild(opt);
             });
-
             document.getElementById('selectionLoading').style.display = 'none';
             document.getElementById('selectionContent').style.display = 'block';
             document.getElementById('viewDashboardBtn').disabled = true;
             select.value = '';
         }
-
         /* ── PASSWORD MODAL ────────────────────────────────────── */
         function showPasswordModal(name) {
             const displayName = name === ALL_KEY ? '👥 Full Team View' : name === PSYCH_KEY ? '🧠 Psychology Department' : name;
@@ -1577,17 +1415,14 @@
             document.getElementById('passwordModal').dataset.key = name;
             setTimeout(() => document.getElementById('passwordInput').focus(), 120);
         }
-
         function hidePasswordModal() {
             document.getElementById('passwordModal').classList.remove('active');
         }
-
         function attemptUnlock() {
             const key     = document.getElementById('passwordModal').dataset.key;
             const entered = document.getElementById('passwordInput').value;
             // Psychology shares the ALL admin password
             const correct = key === PSYCH_KEY ? passwordMap[ALL_KEY] : passwordMap[key];
-
             if (correct && entered === correct) {
                 hidePasswordModal();
                 if (key === ALL_KEY)   renderAllDashboard();
@@ -1603,9 +1438,7 @@
                 input.focus();
             }
         }
-
         /* ── QUARTER / TREND / HEATMAP HELPERS ─────────────────── */
-
         function calcQuarterProgress() {
             const now     = new Date();
             const q       = Math.floor(now.getMonth() / 3);
@@ -1613,7 +1446,6 @@
             const qEnd    = new Date(now.getFullYear(), (q + 1) * 3, 0);
             qEnd.setHours(23, 59, 59, 999);
             const TARGET  = 10000;
-
             let hoursToDate = 0;
             allData.forEach(r => {
                 const ag = parseFloat(r.ClientAgreedCharges);
@@ -1622,7 +1454,6 @@
                 if (isNaN(d) || d < qStart || d > now) return;
                 hoursToDate += parseFloat(r.TimeWorkedInHours) || 0;
             });
-
             const daysElapsed    = Math.max(1, Math.round((now - qStart) / 86400000));
             const daysTotal      = Math.round((qEnd - qStart) / 86400000) + 1;
             const daysRemain     = Math.max(0, Math.round((qEnd - now) / 86400000));
@@ -1632,11 +1463,9 @@
             const needed         = Math.max(0, TARGET - hoursToDate);
             const hrsPerWkNeeded = weeksRemain > 0 ? needed / weeksRemain : 0;
             const qName          = `Q${q + 1} ${now.getFullYear()}`;
-
             return { qName, qStart, qEnd, TARGET, hoursToDate, pct: hoursToDate / TARGET,
                      projected, daysRemain, weeksRemain, hrsPerWkNeeded, needed };
         }
-
         function buildWeeklyTotals() {
             // Sum ALL billable hours across every provider (not just BCBAs)
             const totals = {};
@@ -1650,11 +1479,9 @@
             });
             return sortedWeeks.map(w => ({ week: w, hours: totals[w] || 0 }));
         }
-
         function buildClientHeatmap() {
             const recentWeeks = sortedWeeks.slice(-12);
             const clientMap   = {};
-
             allData.forEach(r => {
                 if (r.ProcedureCode !== '97153') return;
                 const ag = parseFloat(r.ClientAgreedCharges);
@@ -1666,18 +1493,15 @@
                 if (!clientMap[cid]) clientMap[cid] = {};
                 clientMap[cid][week] = (clientMap[cid][week] || 0) + hrs;
             });
-
             const clients = Object.entries(clientMap)
                 .map(([id, weeks]) => ({
                     id, weeks,
                     total: Object.values(weeks).reduce((s, v) => s + v, 0)
                 }))
                 .sort((a, b) => b.total - a.total);
-
             const maxHrs = Math.max(...clients.flatMap(c => Object.values(c.weeks)), 1);
             return { clients, weeks: recentWeeks, maxHrs };
         }
-
         // 0→red, 0.5→amber, 1→green  (matches reference dashboard)
         // pct = hours / authWeeklyHrs (or hours / max if no auth data)
         // 0%→red  50%→amber  90-110%→green  >110%→bright green
@@ -1718,12 +1542,10 @@
                 pct,
             };
         }
-
         function buildClientWoW() {
             if (last4Weeks.length < 2) return [];
             const curr = last4Weeks[last4Weeks.length - 1];
             const prev = last4Weeks[last4Weeks.length - 2];
-
             const byWeek = wk => {
                 const map = {};
                 allData.forEach(r => {
@@ -1736,7 +1558,6 @@
                 });
                 return map;
             };
-
             const c = byWeek(curr), p = byWeek(prev);
             return Array.from(new Set([...Object.keys(c), ...Object.keys(p)]))
                 .map(id => {
@@ -1748,7 +1569,6 @@
                 .filter(x => Math.abs(x.pct) >= 25 || x.isNew || x.isGone)
                 .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
         }
-
         /* ── RENDER: QUARTER PROGRESS ───────────────────────────── */
         function renderQuarterProgress() {
             const q     = calcQuarterProgress();
@@ -1761,7 +1581,6 @@
                 : 'linear-gradient(90deg,var(--warning),#dc2626)';
             const fmt   = n => n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
             const fmtD  = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
             document.getElementById('quarterProgressSection').innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
                     <div class="section-title" style="margin-bottom:0">Progress to 10,000 Billable Hours</div>
@@ -1799,11 +1618,9 @@
                 </div>
             `;
         }
-
         /* ── RENDER: TEAM TREND + WoW ───────────────────────────── */
         function renderTeamTrendChart() {
             if (teamTrendChartInst) { teamTrendChartInst.destroy(); teamTrendChartInst = null; }
-
             const weeklyTotals = buildWeeklyTotals();
             const display      = weeklyTotals.slice(-12);
             const hoursData    = display.map(d => +d.hours.toFixed(2));
@@ -1817,7 +1634,6 @@
             const barColors = hoursData.map((h, i) =>
                 h >= rollingAvg[i] ? 'rgba(5,191,219,0.75)' : 'rgba(255,107,107,0.75)'
             );
-
             teamTrendChartInst = new Chart(
                 document.getElementById('teamTrendCanvas').getContext('2d'),
                 {
@@ -1869,13 +1685,10 @@
                     }
                 }
             );
-
             // WoW client changes
             const wowData = buildClientWoW();
             const grid    = document.getElementById('wowGrid');
-
             if (!wowData.length) { grid.innerHTML = ''; return; }
-
             grid.innerHTML = `
                 <div style="grid-column:1/-1;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem">
                     Client Hour Changes · Week over Week · ≥25% shift (97153)
@@ -1893,19 +1706,16 @@
                 `).join('')}
             `;
         }
-
         /* ── RENDER: CLIENT HEATMAP ─────────────────────────────── */
         function renderClientHeatmap() {
             const { clients, weeks, maxHrs } = buildClientHeatmap();
             const table = document.getElementById('clientHeatmapTable');
             table.innerHTML = '';
             const hasAuth = Object.keys(authHours).length > 0;
-
             if (!clients.length) {
                 table.innerHTML = `<tr><td style="padding:1rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.85rem">No 97153 data found.</td></tr>`;
                 return;
             }
-
             // Header
             const thead = document.createElement('thead');
             const hRow  = document.createElement('tr');
@@ -1913,7 +1723,6 @@
             thN.textContent = 'Client';
             thN.style.cssText = 'text-align:left;min-width:90px;padding-left:0.5rem';
             hRow.appendChild(thN);
-
             if (hasAuth) {
                 const thA = document.createElement('th');
                 thA.textContent = 'Auth/wk';
@@ -1921,7 +1730,6 @@
                 thA.style.cssText = 'color:#a371f7;white-space:nowrap;cursor:help';
                 hRow.appendChild(thA);
             }
-
             weeks.forEach(week => {
                 const th = document.createElement('th');
                 th.textContent = week;
@@ -1931,26 +1739,22 @@
                 }
                 hRow.appendChild(th);
             });
-
             const thTot = document.createElement('th');
             thTot.textContent = 'Total';
             thTot.style.color = 'var(--accent)';
             hRow.appendChild(thTot);
             thead.appendChild(hRow);
             table.appendChild(thead);
-
             // Body
             const tbody = document.createElement('tbody');
             clients.forEach(client => {
                 const row         = document.createElement('tr');
                 const weeklyAuth  = authHours[client.id] || null;
-
                 const nc = document.createElement('td');
                 nc.textContent = clientLabel(client.id);
                 nc.title       = client.id; // hover to see full ID
                 nc.style.cssText = 'font-weight:600;color:var(--text);text-align:left;padding-left:0.5rem;white-space:nowrap;font-size:0.82rem';
                 row.appendChild(nc);
-
                 if (hasAuth) {
                     const ac = document.createElement('td');
                     ac.style.cssText = "font-family:'JetBrains Mono',monospace;font-size:0.78rem;font-weight:600;text-align:center;color:#a371f7;white-space:nowrap";
@@ -1958,7 +1762,6 @@
                     ac.title         = weeklyAuth ? `${weeklyAuth.toFixed(2)} auth hrs/wk` : 'No authorization data';
                     row.appendChild(ac);
                 }
-
                 weeks.forEach(week => {
                     const cell = document.createElement('td');
                     const hrs  = client.weeks[week] || 0;
@@ -1975,7 +1778,6 @@
                     }
                     row.appendChild(cell);
                 });
-
                 const tot = document.createElement('td');
                 tot.textContent = client.total.toFixed(1);
                 tot.style.cssText = "color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.82rem;text-align:center";
@@ -1983,7 +1785,6 @@
                 tbody.appendChild(row);
             });
             table.appendChild(tbody);
-
             // Legend — auth-based if we have data, otherwise max-based
             const legend = document.getElementById('clientHeatmapLegend');
             if (hasAuth) {
@@ -2011,21 +1812,17 @@
                     <span style="font-size:0.72rem;color:var(--text-dim)">${maxHrs.toFixed(0)} hrs (max)</span>`;
             }
         }
-
         /* ── AI INSIGHTS ENGINE ─────────────────────────────────── */
         function generateInsights() {
             const insights = [];
             const weeks = sortedWeeks;
             const recent4 = last4Weeks;
-
             // ── Helper: get a provider's hours for a given week list
             const provHrsInWeeks = (name, wks) =>
                 wks.reduce((s, w) => s + (providerData[name]?.[w] || 0), 0);
-
             // ── Helper: weekly totals array (sorted)
             const weeklyTotals = buildWeeklyTotals();
             const last8 = weeklyTotals.slice(-8);
-
             // ── 1. Team rolling trend direction
             if (last8.length >= 5) {
                 const half = Math.floor(last8.length / 2);
@@ -2042,12 +1839,10 @@
                         desc: `Team hours are up ${changePct.toFixed(1)}% over the past 8 weeks. Strong momentum heading into the rest of the quarter.` });
                 }
             }
-
             // ── 2. Provider-level concerns
             const providers = Object.keys(providerData);
             providers.forEach(name => {
                 const wkHrs = weeks.map(w => providerData[name][w] || 0);
-
                 // Consecutive weeks below target (last 4)
                 const last4Hrs = recent4.map(w => providerData[name][w] || 0);
                 const allBelow = last4Hrs.every(h => h > 0 && h < TARGET_HRS);
@@ -2057,7 +1852,6 @@
                         title: `${name.split(' ')[0]} Below Target 4 Weeks Running`,
                         desc: `Averaging ${avg4.toFixed(1)} hrs/wk over the last 4 weeks — ${(TARGET_HRS - avg4).toFixed(1)} hrs below the ${TARGET_HRS}-hr target. May need schedule review.` });
                 }
-
                 // Significant drop from prior 4 weeks to most recent 4
                 if (recent4.length >= 4 && weeks.length >= 8) {
                     const prior4Weeks = weeks.slice(-8, -4);
@@ -2070,7 +1864,6 @@
                             desc: `Dropped from ${priorAvg.toFixed(1)} hrs/wk to ${currAvg.toFixed(1)} hrs/wk comparing the previous 4-week block to this one.` });
                     }
                 }
-
                 // Provider went completely inactive in last 2 weeks but was active before
                 const latestIdx  = weeks.indexOf(latestWeek);
                 if (latestIdx >= 3) {
@@ -2085,7 +1878,6 @@
                     }
                 }
             });
-
             // ── 3. Quarter on-track check (uses full-team hours from allData via buildWeeklyTotals)
             const q = calcQuarterProgress();
             if (q.weeksRemain > 0 && q.hrsPerWkNeeded > 0) {
@@ -2100,7 +1892,6 @@
                     }).map(r => `${r.ProviderFirstName} ${r.ProviderLastName}`)
                 );
                 const provCount = activeProviders.size || 1;
-
                 if (currTeamAvgWk < q.hrsPerWkNeeded * 0.85) {
                     const gapTotal    = q.hrsPerWkNeeded - currTeamAvgWk;
                     const perProvider = (gapTotal / provCount).toFixed(1);
@@ -2118,7 +1909,6 @@
                         desc: `The team has hit ${fmt3(q.hoursToDate)} billable hours this quarter. Outstanding work.` });
                 }
             }
-
             // ── 5. Supervision flags (per-provider & per-client thresholds)
             providers.forEach(name => {
                 // calcSupervisionData expects an array of weeks and returns providerPct as a %
@@ -2139,17 +1929,14 @@
                     });
                 }
             });
-
             // Cap at 12 total, prioritise concerns then warnings then positives
             const order = { concern:0, warning:1, info:2, positive:3 };
             return insights.sort((a,b) => order[a.type]-order[b.type]).slice(0, 12);
         }
-
         function renderAIInsights() {
             const insights = generateInsights();
             const sec = document.getElementById('aiInsightsSection');
             if (!insights.length) { sec.innerHTML = ''; return; }
-
             const iconMap = { concern:'🔴', warning:'🟡', positive:'🟢', info:'🔵' };
             sec.innerHTML = `
                 <div class="insights-section">
@@ -2172,20 +1959,16 @@
                 </div>
             `;
         }
-
         /* ── PSYCHOLOGY DASHBOARD ───────────────────────────────── */
         function renderPsychDashboard() {
             hideAll();
             document.getElementById('psychDashboard').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
-
             const display4  = sortedWeeks.slice(-4);
             const display12 = sortedWeeks.slice(-12);
-
             // Build per-provider, per-week client detail list
             const detailByProvider = {};
             PSYCH_PROVIDERS.forEach(p => { detailByProvider[p.name] = {}; });
-
             allData.forEach(r => {
                 if (r.ProcedureCode !== PSYCH_CODE) return;
                 const ag = parseFloat(r.ClientAgreedCharges);
@@ -2205,7 +1988,6 @@
                     });
                 }
             });
-
             // ── Conversion pipeline ──────────────────────────────────
             // All clients diagnosed (96136) by either psych provider
             const allDiagnosed = new Map(); // clientId → { name, diagDate, diagProvider }
@@ -2226,7 +2008,6 @@
                     });
                 }
             });
-
             // Clients who have billed ANY ABA code (97151, 97152, 97153, 97155) with agreed charges
             const ABA_CODES = new Set(['97151', '97152', '97153', '97155']);
             const hasABABilling = new Set();
@@ -2235,7 +2016,6 @@
                 const ag = parseFloat(r.ClientAgreedCharges);
                 if (!isNaN(ag) && ag > 0 && r.ClientId) hasABABilling.add(r.ClientId);
             });
-
             // Exclude not-viable clients from pipeline counts
             const viableDiagnosed = [...allDiagnosed.entries()].filter(([cid]) => !notViable.has(cid));
             const totalDiag   = viableDiagnosed.length;
@@ -2245,7 +2025,6 @@
                 .sort((a, b) => b[1].diagDate - a[1].diagDate);
             const convPct     = totalDiag > 0 ? (converted / totalDiag * 100).toFixed(0) : 0;
             const fmtDate     = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-
             const pipelineRows = pipeline.map(([cid, d]) => `
                 <tr>
                     <td style="padding:0.35rem 0.75rem 0.35rem 0;color:var(--text);font-weight:600;font-size:0.82rem">${d.name}</td>
@@ -2253,7 +2032,6 @@
                     <td style="padding:0.35rem 0.75rem;color:var(--text-dim);font-size:0.78rem">${d.diagProvider}</td>
                     <td style="padding:0.35rem 0;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.74rem">${fmtDate(d.diagDate)}</td>
                 </tr>`).join('');
-
             const conversionHTML = `
                 <div class="psych-card" style="margin-bottom:1.5rem">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
@@ -2294,7 +2072,6 @@
                         </table>
                     </div>` : `<div style="color:var(--success);font-size:0.85rem;font-weight:600">✅ All diagnosed clients have received an ABA assessment.</div>`}
                 </div>`;
-
             // ── Individual provider cards ────────────────────────────
             const cards = PSYCH_PROVIDERS.map((p, idx) => {
                 const weekCounts  = display4.map(w => (detailByProvider[p.name][w] || []).length);
@@ -2309,7 +2086,6 @@
                     const sl = weekCounts.slice(0, i+1);
                     return +(sl.reduce((s,v)=>s+v,0) / sl.length).toFixed(2);
                 });
-
                 const pipHTML = display4.map(w => {
                     const cnt   = (detailByProvider[p.name][w] || []).length;
                     const cls   = cnt === 0 ? 'pw-zero' : cnt >= p.target ? 'pw-met' : 'pw-missed';
@@ -2319,7 +2095,6 @@
                         <span class="pw-val ${cls}">${cnt || '—'}</span>
                     </div>`;
                 }).join('');
-
                 return `
                     <div class="psych-card">
                         <div class="psych-card-header">
@@ -2353,9 +2128,7 @@
                         <div id="psychDetail${idx}" class="psych-detail-panel" style="display:none;margin-top:0.75rem;background:var(--bg-card);border:1px solid var(--border);border-radius:9px;padding:0.9rem 1rem"></div>
                     </div>`;
             }).join('');
-
             document.getElementById('psychContent').innerHTML = conversionHTML + `<div class="psych-grid">${cards}</div>`;
-
             // Wire up pipeline Excel download
             const dlBtn = document.getElementById('pipelineDownloadBtn');
             if (dlBtn) {
@@ -2373,7 +2146,6 @@
                     XLSX.writeFile(wb, `ABA_Assessment_Pipeline_${new Date().toISOString().slice(0,10)}.xlsx`);
                 });
             }
-
             // Wire up pip click → client detail panel
             PSYCH_PROVIDERS.forEach((p, idx) => {
                 const pipsEl = document.getElementById(`psychPips${idx}`);
@@ -2410,7 +2182,6 @@
                     });
                 });
             });
-
             // Charts — 12 weeks of data, KPI boxes reference last 4
             PSYCH_PROVIDERS.forEach((p, idx) => {
                 const weekCounts = display12.map(w => (detailByProvider[p.name][w] || []).length);
@@ -2443,12 +2214,10 @@
                 });
             });
         }
-
         /* ── ASSESSMENT BANNER ──────────────────────────────────── */
         function renderAssessmentBanner() {
             const TARGET = 2;
             const PROC   = '97151';
-
             // Build a set of clients who had ANY 97153 billing before a given date
             // clientId → earliest 97153 date (as ms timestamp)
             const first97153Date = {};
@@ -2464,7 +2233,6 @@
                     first97153Date[cid] = d;
                 }
             });
-
             // Build per-week map: week → [ { client, provider, date } ]
             // Only include a 97151 if the client had NO 97153 billing prior to this assessment date
             const detailByWeek = {};
@@ -2489,7 +2257,6 @@
                     date:     r.DateOfService || '',
                 });
             });
-
             // Each client may only appear in one week — the week of their latest 97151 date.
             // First, find the latest assessment date per client across all weeks.
             const latestAssessDate = {};
@@ -2501,7 +2268,6 @@
                     }
                 });
             });
-
             // Keep a record only if its date matches that client's latest date,
             // and deduplicate within the same week.
             Object.keys(detailByWeek).forEach(w => {
@@ -2514,11 +2280,9 @@
                     return true;
                 });
             });
-
             const recentWeeks = sortedWeeks.slice(-6);
             const latestCount = detailByWeek[latestWeek]?.length || 0;
             const met         = latestCount >= TARGET;
-
             const historyChips = recentWeeks.map(w => {
                 const cnt   = detailByWeek[w]?.length || 0;
                 const cls   = cnt === 0 ? 'chip-zero' : cnt >= TARGET ? 'chip-met' : 'chip-missed';
@@ -2529,7 +2293,6 @@
                             <span class="chip-count ${cls}">${label}</span>
                         </div>`;
             }).join('');
-
             const banner = document.getElementById('assessmentBanner');
             banner.innerHTML = `
                 <div class="assessment-banner ${met ? 'met' : 'missed'}">
@@ -2548,7 +2311,6 @@
                     <div class="assessment-history">${historyChips}</div>
                 </div>
                 <div id="assessmentDetail" style="display:none;margin-top:0.75rem;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem"></div>`;
-
             // Chip click → show detail panel
             banner.querySelectorAll('.assessment-week-chip[data-week]').forEach(chip => {
                 chip.addEventListener('click', () => {
@@ -2556,10 +2318,8 @@
                     const detail  = document.getElementById('assessmentDetail');
                     const records = detailByWeek[w] || [];
                     if (!records.length) return;
-
                     const isOpen = detail.style.display !== 'none' && detail.dataset.week === w;
                     if (isOpen) { detail.style.display = 'none'; detail.dataset.week = ''; return; }
-
                     const rows = records.map(d => `
                         <tr>
                             <td style="padding:0.4rem 0.75rem 0.4rem 0;color:var(--text);font-weight:600">${d.name}</td>
@@ -2567,7 +2327,6 @@
                             <td style="padding:0.4rem 0.75rem;color:var(--text-dim)">${d.provider}</td>
                             <td style="padding:0.4rem 0;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.78rem">${d.date}</td>
                         </tr>`).join('');
-
                     detail.dataset.week = w;
                     detail.style.display = 'block';
                     detail.innerHTML = `
@@ -2591,13 +2350,11 @@
                 });
             });
         }
-
         /* ── ALL / TEAM DASHBOARD ──────────────────────────────── */
         function renderAllDashboard() {
             hideAll();
             document.getElementById('allDashboard').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
-
             const providers   = Object.entries(providerData);
             const provStats   = providers.map(([name, weeks]) => ({
                 name,
@@ -2606,13 +2363,11 @@
                 clients: calcClients(name, latestWeek),
                 weeks,
             }));
-
             /* ── Summary stats ── */
             const teamAvg    = provStats.reduce((s,p) => s + p.avg, 0) / provStats.length;
             const onTarget   = provStats.filter(p => p.avg >= TARGET_HRS).length;
             const below      = provStats.filter(p => p.avg < TARGET_HRS).length;
             const top        = provStats.reduce((a, b) => a.avg > b.avg ? a : b);
-
             document.getElementById('teamSummaryStats').innerHTML = `
                 <div class="stat-card">
                     <div class="stat-label">Team Average</div>
@@ -2635,7 +2390,6 @@
                     <div class="stat-sub">${top.avg.toFixed(1)} hrs avg</div>
                 </div>
             `;
-
             /* ── KPI cards ── */
             const grid = document.getElementById('teamKpiGrid');
             grid.innerHTML = '';
@@ -2645,7 +2399,6 @@
                 const bar = on
                     ? 'linear-gradient(90deg,var(--success),#16a34a)'
                     : 'linear-gradient(90deg,var(--accent),var(--secondary))';
-
                 const card = document.createElement('div');
                 card.className = 'kpi-card';
                 card.innerHTML = `
@@ -2674,11 +2427,9 @@
                 `;
                 grid.appendChild(card);
             });
-
             /* ── Full heatmap ── */
             const table = document.getElementById('teamHeatmapTable');
             table.innerHTML = '';
-
             const hRow = document.createElement('tr');
             const thP  = document.createElement('th');
             thP.textContent = 'Provider';
@@ -2693,7 +2444,6 @@
                 hRow.appendChild(th);
             });
             table.appendChild(hRow);
-
             Object.entries(providerData)
                 .sort(([a],[b]) => a.localeCompare(b))
                 .forEach(([name, weeks]) => {
@@ -2715,21 +2465,214 @@
                     });
                     table.appendChild(row);
                 });
-
             /* ── Assessment banner, quarter progress, team trend, client heatmap, insights ── */
             renderAssessmentBanner();
             renderQuarterProgress();
             renderTeamTrendChart();
             renderClientHeatmap();
             renderAIInsights();
+            renderWeeklyActions();
         }
-
+        /* ── THIS WEEK'S ACTIONS ───────────────────────────────── */
+        function computeWeeklyActions() {
+            const last3 = sortedWeeks.slice(-3);
+            // Per-client weekly 97153 hrs + blended agreed hourly rate
+            const cw = {}, cRate = {};
+            allData.forEach(r => {
+                if (r.ProcedureCode !== '97153') return;
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                const w  = getWeekNumber(r.DateOfService);
+                const id = r.ClientId;
+                if (!id || !w) return;
+                const hrs = parseFloat(r.TimeWorkedInHours) || 0;
+                if (!cw[id]) cw[id] = {};
+                cw[id][w] = (cw[id][w] || 0) + hrs;
+                if (!cRate[id]) cRate[id] = { ag: 0, hrs: 0 };
+                cRate[id].ag += ag; cRate[id].hrs += hrs;
+            });
+            // Which BCBA supervises each client (most 97155 hrs, last 4 weeks)
+            const supBy = {};
+            allData.forEach(r => {
+                if (r.ProcedureCode !== '97155') return;
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                if (!last4Weeks.includes(getWeekNumber(r.DateOfService))) return;
+                const id = r.ClientId; if (!id) return;
+                const p = `${r.ProviderFirstName} ${r.ProviderLastName}`;
+                if (!supBy[id]) supBy[id] = {};
+                supBy[id][p] = (supBy[id][p] || 0) + (parseFloat(r.TimeWorkedInHours) || 0);
+            });
+            const ownerOf = id => {
+                const m = supBy[id];
+                if (!m) return null;
+                return Object.entries(m).sort((a, b) => b[1] - a[1])[0][0];
+            };
+            // 1) Under-delivery vs authorization in the latest week
+            const under = [];
+            Object.keys(authHours).forEach(id => {
+                const wk = cw[id] || {};
+                if (!last4Weeks.some(w => (wk[w] || 0) > 0)) return; // inactive
+                const del  = wk[latestWeek] || 0;
+                const auth = authHours[id];
+                const gap  = auth - del;
+                if (gap > 1) {
+                    const rate = cRate[id] && cRate[id].hrs > 0 ? cRate[id].ag / cRate[id].hrs : 0;
+                    under.push({ id, auth, del, gap, pct: auth > 0 ? del / auth * 100 : 0,
+                                 dollars: gap * rate, owner: ownerOf(id) });
+                }
+            });
+            under.sort((a, b) => b.gap - a.gap);
+            // 2) Clients declining 3 weeks in a row
+            const declines = [];
+            Object.entries(cw).forEach(([id, wk]) => {
+                const v = last3.map(w => wk[w] || 0);
+                if (v.length === 3 && v[0] > 3 && v[0] > v[1] && v[1] > v[2]) {
+                    declines.push({ id, v, dropPct: (v[0] - v[2]) / v[0] * 100, owner: ownerOf(id) });
+                }
+            });
+            declines.sort((a, b) => b.dropPct - a.dropPct);
+            // 3) 97155 hrs needed this week to reach 10% per client (trailing 4 wks)
+            const supNeeds = [];
+            Object.keys(providerData).forEach(b => {
+                const sup = calcSupervisionData(b, last4Weeks);
+                sup.clients.forEach(c => {
+                    if (c.hrs97153 > 3 && c.pct < 10) {
+                        supNeeds.push({ bcba: b, id: c.id, pct: c.pct,
+                                        need: Math.max(0, 0.10 * c.hrs97153 - c.hrs97155) });
+                    }
+                });
+            });
+            supNeeds.sort((a, b) => b.need - a.need);
+            return {
+                under, declines, supNeeds,
+                totalGapHrs:     under.reduce((s, c) => s + c.gap, 0),
+                totalGapDollars: under.reduce((s, c) => s + c.dollars, 0),
+            };
+        }
+        function renderWeeklyActions() {
+            const el = document.getElementById('weeklyActionsSection');
+            if (!el) return;
+            const d = computeWeeklyActions();
+            const hasAuth = Object.keys(authHours).length > 0;
+            const fmt$ = n => '$' + Math.round(n).toLocaleString();
+            const h1 = n => n.toFixed(1);
+            // Build ranked action items
+            const actions = [];
+            d.under.slice(0, 3).forEach(c => {
+                const dec  = d.declines.find(x => x.id === c.id);
+                const gone = (cwZero => dec && dec.v[2] === 0)();
+                actions.push({
+                    cls: 'action-red',
+                    title: gone
+                        ? `Call family — ${clientLabel(c.id)} delivered 0 of ${h1(c.auth)} authorized hrs`
+                        : `Schedule ${h1(c.gap)} more hrs/wk — ${clientLabel(c.id)}`,
+                    sub: `Delivered ${h1(c.del)} of ${h1(c.auth)} authorized hrs (${c.pct.toFixed(0)}%) in ${latestWeek}`
+                         + (dec ? ` · trending down: ${dec.v.map(h1).join(' → ')}` : '')
+                         + (c.owner ? ` · Owner: ${c.owner.split(' ')[0]}` : ''),
+                });
+            });
+            // Supervision rollup per BCBA
+            const byBcba = {};
+            d.supNeeds.forEach(n => {
+                if (!byBcba[n.bcba]) byBcba[n.bcba] = { total: 0, items: [] };
+                byBcba[n.bcba].total += n.need;
+                byBcba[n.bcba].items.push(n);
+            });
+            Object.entries(byBcba)
+                .sort((a, b) => b[1].total - a[1].total)
+                .slice(0, 3)
+                .forEach(([b, v]) => {
+                    if (v.total < 0.5) return;
+                    actions.push({
+                        cls: 'action-amber',
+                        title: `${b.split(' ')[0]}: ${h1(v.total)} hrs of 97155 needed this week`,
+                        sub: v.items.slice(0, 4).map(i => `${clientLabel(i.id)} ${h1(i.need)}h (now ${i.pct.toFixed(1)}%)`).join(' · ')
+                             + ' — to reach 10% on trailing 4 weeks',
+                    });
+                });
+            const actionsHTML = actions.length
+                ? actions.map(a => `
+                    <div class="action-item ${a.cls}">
+                        <div class="action-title">${a.title}</div>
+                        <div class="action-sub">${a.sub}</div>
+                    </div>`).join('')
+                : `<div style="color:var(--success);font-size:0.9rem;font-weight:600">✅ Nothing urgent — all clients near authorization and supervision targets.</div>`;
+            // Panel: left on the table
+            const underRows = d.under.slice(0, 8).map(c => `
+                <tr>
+                    <td style="font-weight:600;color:var(--text)">${clientLabel(c.id)}</td>
+                    <td class="num">${h1(c.auth)}</td>
+                    <td class="num">${h1(c.del)}</td>
+                    <td class="num" style="color:var(--warning);font-weight:700">−${h1(c.gap)}</td>
+                    <td class="num" style="color:var(--text-dim)">${fmt$(c.dollars)}</td>
+                    <td style="color:var(--text-dim)">${c.owner ? c.owner.split(' ')[0] : '—'}</td>
+                </tr>`).join('');
+            const underPanel = hasAuth ? `
+                <div class="actions-panel">
+                    <div class="actions-panel-title">💸 Left on the table — ${latestWeek}</div>
+                    <div class="actions-panel-sub">${d.under.length} active clients under authorization · ${h1(d.totalGapHrs)} unbilled hrs ≈ ${fmt$(d.totalGapDollars)} at each client's agreed rate</div>
+                    <table class="actions-table">
+                        <tr><th>Client</th><th class="num">Auth/wk</th><th class="num">Billed</th><th class="num">Gap</th><th class="num">$ Value</th><th>BCBA</th></tr>
+                        ${underRows}
+                    </table>
+                    ${d.under.length > 8 ? `<div style="font-size:0.72rem;color:var(--text-dim);margin-top:0.5rem;font-family:'JetBrains Mono',monospace">+ ${d.under.length - 8} more clients</div>` : ''}
+                </div>` : `
+                <div class="actions-panel">
+                    <div class="actions-panel-title">💸 Left on the table</div>
+                    <div class="actions-panel-sub">No authorization data loaded — check the auth sheet.</div>
+                </div>`;
+            // Panel: sustained declines
+            const last3 = sortedWeeks.slice(-3);
+            const decRows = d.declines.slice(0, 8).map(c => `
+                <tr>
+                    <td style="font-weight:600;color:var(--text)">${clientLabel(c.id)}</td>
+                    <td class="num">${c.v.map(h1).join(' → ')}</td>
+                    <td class="num" style="color:${c.dropPct >= 50 ? 'var(--warning)' : '#f59e0b'};font-weight:700">−${c.dropPct.toFixed(0)}%</td>
+                    <td style="color:var(--text-dim)">${c.owner ? c.owner.split(' ')[0] : '—'}</td>
+                </tr>`).join('');
+            const decPanel = `
+                <div class="actions-panel">
+                    <div class="actions-panel-title">📉 Sliding 3 weeks straight</div>
+                    <div class="actions-panel-sub">Direct hrs (97153) · ${last3.join(' · ')}</div>
+                    ${d.declines.length ? `
+                    <table class="actions-table">
+                        <tr><th>Client</th><th class="num">Trend</th><th class="num">Drop</th><th>BCBA</th></tr>
+                        ${decRows}
+                    </table>` : `<div style="color:var(--success);font-size:0.85rem;font-weight:600">No sustained declines.</div>`}
+                </div>`;
+            // Panel: supervision needed
+            const supRows = d.supNeeds.filter(n => n.need >= 0.2).slice(0, 10).map(n => `
+                <tr>
+                    <td style="color:var(--text)">${n.bcba.split(' ')[0]}</td>
+                    <td style="font-weight:600;color:var(--text)">${clientLabel(n.id)}</td>
+                    <td class="num" style="color:${n.pct < 5 ? 'var(--warning)' : '#f59e0b'}">${n.pct.toFixed(1)}%</td>
+                    <td class="num" style="font-weight:700;color:var(--accent)">${h1(n.need)} h</td>
+                </tr>`).join('');
+            const supPanel = `
+                <div class="actions-panel">
+                    <div class="actions-panel-title">🔍 Supervision needed this week</div>
+                    <div class="actions-panel-sub">97155 hrs to bring each client to 10% on the trailing 4 weeks</div>
+                    ${supRows ? `
+                    <table class="actions-table">
+                        <tr><th>BCBA</th><th>Client</th><th class="num">Now</th><th class="num">Need</th></tr>
+                        ${supRows}
+                    </table>` : `<div style="color:var(--success);font-size:0.85rem;font-weight:600">All clients at or above 10%.</div>`}
+                </div>`;
+            el.innerHTML = `
+                <div class="section-title">This Week's Actions</div>
+                ${actionsHTML}
+                <div class="actions-grid">
+                    ${underPanel}
+                    ${decPanel}
+                    ${supPanel}
+                </div>`;
+        }
         /* ── INDIVIDUAL DASHBOARD ──────────────────────────────── */
         function renderIndividualDashboard(name) {
             hideAll();
             document.getElementById('individualDashboard').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
-
             const weeks   = providerData[name] || {};
             const avg     = calcAvg(weeks, last4Weeks);
             const total4w = calcTotal(weeks, last4Weeks);
@@ -2740,9 +2683,7 @@
             const bar     = on
                 ? 'linear-gradient(90deg,var(--success),#16a34a)'
                 : 'linear-gradient(90deg,var(--accent),var(--secondary))';
-
             document.getElementById('dashProviderName').textContent = name;
-
             document.getElementById('metricsRow').innerHTML = `
                 <div class="metric-card">
                     <div class="metric-label">4-Week Average</div>
@@ -2784,22 +2725,18 @@
                     </div>
                 </div>
             `;
-
             renderTrendChart(weeks);
             renderSupervisionSection(name);
             renderIndividualHeatmap(name, weeks);
         }
-
         function renderTrendChart(weeks) {
             if (trendChart) { trendChart.destroy(); trendChart = null; }
-
             const displayWeeks = sortedWeeks.slice(-12);
             const hoursData    = displayWeeks.map(w => +(weeks[w] || 0).toFixed(2));
             const barColors    = displayWeeks.map(w => {
                 if (!last4Weeks.includes(w)) return 'rgba(5,191,219,0.25)';
                 return (weeks[w] || 0) >= TARGET_HRS ? 'rgba(81,207,102,0.85)' : 'rgba(5,191,219,0.85)';
             });
-
             trendChart = new Chart(
                 document.getElementById('trendChart').getContext('2d'),
                 {
@@ -2865,13 +2802,11 @@
                 }
             );
         }
-
         function renderSupervisionSection(name) {
             const sup  = calcSupervisionData(name, last4Weeks);
             const pOn  = sup.providerPct >= 5;
             const cAll = sup.clientsMeetingTarget;
             const cTot = sup.clients.length;
-
             /* ── Summary cards ── */
             document.getElementById('supervisionSummary').innerHTML = `
                 <div class="supervision-stat ${pOn ? 'good' : 'warn'}">
@@ -2901,16 +2836,13 @@
                     </div>
                 </div>
             `;
-
             /* ── Client table ── */
             const table = document.getElementById('supervisionTable');
             table.innerHTML = '';
-
             if (sup.clients.length === 0) {
                 table.innerHTML = `<tr><td colspan="5" style="padding:1rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.85rem">No 97155 data found for this period.</td></tr>`;
                 return;
             }
-
             // Header
             const thead = document.createElement('thead');
             thead.innerHTML = `
@@ -2923,13 +2855,11 @@
                 </tr>
             `;
             table.appendChild(thead);
-
             const tbody = document.createElement('tbody');
             sup.clients.forEach(c => {
                 const met       = c.pct >= 10;
                 const fillColor = met ? 'var(--success)' : c.pct >= 5 ? '#f59e0b' : 'var(--warning)';
                 const fillWidth = Math.min(c.pct / 20 * 100, 100); // scale: 20% = full bar
-
                 const tr = document.createElement('tr');
                 if (!met) tr.className = 'row-warn';
                 tr.innerHTML = `
@@ -2954,11 +2884,9 @@
             });
             table.appendChild(tbody);
         }
-
         function renderIndividualHeatmap(name, weeks) {
             const table = document.getElementById('heatmapTable');
             table.innerHTML = '';
-
             const hRow = document.createElement('tr');
             const thP  = document.createElement('th');
             thP.textContent = 'Provider';
@@ -2973,7 +2901,6 @@
                 hRow.appendChild(th);
             });
             table.appendChild(hRow);
-
             const row = document.createElement('tr');
             const nc  = document.createElement('td');
             nc.textContent = name;
@@ -2992,21 +2919,17 @@
             });
             table.appendChild(row);
         }
-
         /* ── EVENTS ────────────────────────────────────────────── */
         document.getElementById('employeeSelect').addEventListener('change', function () {
             document.getElementById('viewDashboardBtn').disabled = !this.value;
         });
-
         document.getElementById('viewDashboardBtn').addEventListener('click', function () {
             const val = document.getElementById('employeeSelect').value;
             if (!val) return;
-
             const isAll   = val === ALL_KEY;
             const isPsych = val === PSYCH_KEY;
             // Psychology uses the ALL password
             const hasPassword = isPsych ? !!passwordMap[ALL_KEY] : !!passwordMap[val];
-
             // ALL/Psychology always require a password — block if none is configured
             if ((isAll || isPsych) && !hasPassword) {
                 const errDiv = document.getElementById('selectionError');
@@ -3014,27 +2937,21 @@
                 errDiv.textContent = 'No admin password found. Add a row with ProviderName = "ALL" to your Passwords sheet.';
                 return;
             }
-
             document.getElementById('selectionError').style.display = 'none';
-
             if (hasPassword || isPsych) {
                 showPasswordModal(val);
             } else {
                 renderIndividualDashboard(val);
             }
         });
-
         document.getElementById('submitPasswordBtn').addEventListener('click', attemptUnlock);
-
         document.getElementById('passwordInput').addEventListener('keydown', e => {
             if (e.key === 'Enter') attemptUnlock();
         });
-
         document.getElementById('cancelPasswordBtn').addEventListener('click', hidePasswordModal);
         document.getElementById('backBtn').addEventListener('click', showSelectionScreen);
         document.getElementById('allBackBtn').addEventListener('click', showSelectionScreen);
         document.getElementById('psychBackBtn').addEventListener('click', showSelectionScreen);
-
         /* ── INIT ──────────────────────────────────────────────── */
         async function init() {
             try {
@@ -3047,12 +2964,9 @@
                     fetch(AUTH_URL).then(r => r.ok ? r.text() : '').catch(() => ''),
                     fetch(VIABILITY_URL).then(r => r.ok ? r.text() : '').catch(() => '')
                 ]);
-
                 allData = parseCSV(mainText);
                 if (!allData.length) throw new Error('No data found in the main sheet.');
-
                 buildClientNameMap(allData);
-
                 // Parse authorized hours sheet
                 if (authText) {
                     const authRows = parseCSV(authText);
@@ -3074,7 +2988,6 @@
                         }
                     }
                 }
-
                 // Parse not-viable sheet
                 if (viabText) {
                     const viabRows = parseCSV(viabText);
@@ -3100,7 +3013,6 @@
                         }
                     }
                 }
-
                 if (passText) {
                     const passRows = parseCSV(passText);
                     if (passRows.length > 0) {
@@ -3119,17 +3031,13 @@
                         }
                     }
                 }
-
                 providerData = processData(allData);
-
                 const allWeeks = new Set();
                 Object.values(providerData).forEach(p => Object.keys(p).forEach(w => allWeeks.add(w)));
                 sortedWeeks = Array.from(allWeeks).sort();
                 last4Weeks  = sortedWeeks.slice(-4);
                 latestWeek  = sortedWeeks.at(-1);
-
                 showSelectionScreen();
-
             } catch (err) {
                 document.getElementById('selectionLoading').style.display = 'none';
                 const c = document.getElementById('selectionContent');
@@ -3137,7 +3045,6 @@
                 c.innerHTML = `<div class="error-msg"><strong>Could not load data</strong><br><br>${err.message}<br><br>Make sure the sheet is shared as "Anyone with the link can view".</div>`;
             }
         }
-
         init();
     </script>
 </body>
