@@ -295,6 +295,45 @@
             border-radius: 2px;
             flex-shrink: 0;
         }
+        /* ─── HEATMAP MODE TOGGLE ───────────────────────────────── */
+        .heatmap-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .heatmap-toggle-row .section-title { margin-bottom: 0; }
+        .seg-toggle {
+            display: inline-flex;
+            background: var(--bg-card, #161b22);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 3px;
+            gap: 3px;
+            flex-shrink: 0;
+        }
+        .seg-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            background: transparent;
+            border: none;
+            border-radius: 7px;
+            padding: 0.42rem 0.95rem;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+        .seg-btn:hover { color: var(--text); }
+        .seg-btn.active {
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+            color: #04141a;
+        }
         /* ─── SUMMARY STATS ROW (ALL view) ──────────────────────── */
         .summary-stats {
             display: grid;
@@ -1085,9 +1124,15 @@
                 </div>
                 <div class="wow-grid" id="wowGrid"></div>
             </div>
-            <!-- Client hours heatmap -->
+            <!-- 97153 hours heatmap — client / provider toggle -->
             <div class="heatmap-section" style="margin-bottom:2rem">
-                <div class="section-title">Client Hours Heatmap (97153) · Last 12 Weeks</div>
+                <div class="heatmap-toggle-row">
+                    <div class="section-title" id="heatmapSectionTitle">Client Hours Heatmap (97153) · Last 12 Weeks</div>
+                    <div class="seg-toggle" id="heatmapModeToggle">
+                        <button class="seg-btn active" data-mode="client">Clients</button>
+                        <button class="seg-btn" data-mode="provider">Providers</button>
+                    </div>
+                </div>
                 <div class="heatmap-scroll">
                     <table class="heatmap-table" id="clientHeatmapTable"></table>
                 </div>
@@ -1187,6 +1232,13 @@
             { name: 'Katy Sampson',           target: 2 },
         ];
         const PSYCH_CODE = '96136';
+        // Weekly 97153 direct-hours target used to colour the provider heatmap.
+        // 32 hrs/wk = full-time expectation. Add a name here to override per person.
+        const PROVIDER_97153_TARGET = 32;
+        const PROVIDER_TARGET_OVERRIDES = {
+            // 'Jane Doe': 20,
+        };
+        const providerTarget = name => PROVIDER_TARGET_OVERRIDES[name] || PROVIDER_97153_TARGET;
         /* ── STATE ─────────────────────────────────────────────── */
         let allData      = [];
         let passwordMap  = {};
@@ -1197,6 +1249,7 @@
         let sortedWeeks  = [];
         let last4Weeks   = [];
         let latestWeek   = '';
+        let heatmapMode  = 'client'; // 'client' | 'provider' — drives the 97153 heatmap
         let trendChart            = null;
         let teamTrendChartInst    = null;
         /* ── CSV PARSING ───────────────────────────────────────── */
@@ -1542,6 +1595,65 @@
                 pct,
             };
         }
+        /* ── PROVIDER 97153 HEATMAP ─────────────────────────────── */
+        // Mirrors buildClientHeatmap() but groups billed 97153 hours by the
+        // provider who delivered them. Deliberately NOT limited to the
+        // "qualified" (97155-billing) list — techs/RBTs bill most 97153.
+        function buildProviderHeatmap() {
+            const recentWeeks  = sortedWeeks.slice(-12);
+            const providerMap  = {};
+            allData.forEach(r => {
+                if (r.ProcedureCode !== '97153') return;
+                const ag = parseFloat(r.ClientAgreedCharges);
+                if (isNaN(ag) || ag <= 0) return;
+                const week = getWeekNumber(r.DateOfService);
+                if (!recentWeeks.includes(week)) return;
+                const name = `${(r.ProviderFirstName || '').trim()} ${(r.ProviderLastName || '').trim()}`.trim();
+                if (!name) return;
+                const hrs = parseFloat(r.TimeWorkedInHours) || 0;
+                if (!providerMap[name]) providerMap[name] = { weeks: {}, clients: {} };
+                providerMap[name].weeks[week] = (providerMap[name].weeks[week] || 0) + hrs;
+                const cid = r.ClientId || 'Unknown';
+                if (last4Weeks.includes(week)) providerMap[name].clients[cid] = true;
+            });
+            const providers = Object.entries(providerMap)
+                .map(([id, d]) => {
+                    const weeks  = d.weeks;
+                    const total  = Object.values(weeks).reduce((s, v) => s + v, 0);
+                    const active = last4Weeks.filter(w => weeks[w] > 0);
+                    return {
+                        id, weeks, total,
+                        clients: Object.keys(d.clients).length,
+                        avg4:    active.length
+                                 ? last4Weeks.reduce((s, w) => s + (weeks[w] || 0), 0) / active.length
+                                 : 0,
+                    };
+                })
+                .sort((a, b) => b.total - a.total);
+            const maxHrs = Math.max(...providers.flatMap(p => Object.values(p.weeks)), 1);
+            return { providers, weeks: recentWeeks, maxHrs };
+        }
+        // Provider shading: % of the weekly 97153 target (32 hrs full-time).
+        // Same red → amber → green ramp as clients, but going OVER target is
+        // a good thing for a provider, so it stays green rather than flagging.
+        function providerHeatColor(hours, target) {
+            if (!hours || hours === 0) return { bg: 'rgba(22,27,34,0.9)', color: '#3a4555', pct: 0 };
+            const t   = target > 0 ? target : PROVIDER_97153_TARGET;
+            const pct = hours / t;
+            let r, g, b = 40, alpha;
+            if (pct <= 0.5) {
+                r = 200; g = Math.round(pct * 2 * 60); alpha = 0.3 + pct * 0.4;
+            } else if (pct <= 0.85) {
+                const k = (pct - 0.5) / 0.35;
+                r = 220; g = Math.round(60 + k * 120); alpha = 0.5 + k * 0.2;
+            } else if (pct <= 1) {
+                const k = (pct - 0.85) / 0.15;
+                r = Math.round(220 - k * 160); g = 180; alpha = 0.7 + k * 0.25;
+            } else {
+                r = 45; g = 190; alpha = 0.95;
+            }
+            return { bg: `rgba(${r},${g},${b},${alpha})`, color: '#e6edf3', pct };
+        }
         function buildClientWoW() {
             if (last4Weeks.length < 2) return [];
             const curr = last4Weeks[last4Weeks.length - 1];
@@ -1811,6 +1923,109 @@
                     ${swatches}
                     <span style="font-size:0.72rem;color:var(--text-dim)">${maxHrs.toFixed(0)} hrs (max)</span>`;
             }
+        }
+        /* ── RENDER: PROVIDER 97153 HEATMAP ─────────────────────── */
+        function renderProviderHeatmap() {
+            const { providers, weeks, maxHrs } = buildProviderHeatmap();
+            const table = document.getElementById('clientHeatmapTable');
+            table.innerHTML = '';
+            if (!providers.length) {
+                table.innerHTML = `<tr><td style="padding:1rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:0.85rem">No 97153 provider data found.</td></tr>`;
+                document.getElementById('clientHeatmapLegend').innerHTML = '';
+                return;
+            }
+            // Header
+            const thead = document.createElement('thead');
+            const hRow  = document.createElement('tr');
+            const thN   = document.createElement('th');
+            thN.textContent = 'Provider';
+            thN.style.cssText = 'text-align:left;min-width:140px;padding-left:0.5rem';
+            hRow.appendChild(thN);
+            const thT = document.createElement('th');
+            thT.textContent = 'Target/wk';
+            thT.title = `Weekly 97153 target (${PROVIDER_97153_TARGET} hrs full-time)`;
+            thT.style.cssText = 'color:#a371f7;white-space:nowrap;cursor:help';
+            hRow.appendChild(thT);
+            weeks.forEach(week => {
+                const th = document.createElement('th');
+                th.textContent = week;
+                if (last4Weeks.includes(week)) {
+                    th.style.background = 'rgba(5,191,219,0.12)';
+                    th.style.color = 'var(--accent)';
+                }
+                hRow.appendChild(th);
+            });
+            const thTot = document.createElement('th');
+            thTot.textContent = 'Total';
+            thTot.style.color = 'var(--accent)';
+            hRow.appendChild(thTot);
+            thead.appendChild(hRow);
+            table.appendChild(thead);
+            // Body
+            const tbody = document.createElement('tbody');
+            providers.forEach(prov => {
+                const row    = document.createElement('tr');
+                const target = providerTarget(prov.id);
+                const nc = document.createElement('td');
+                nc.textContent = prov.id;
+                nc.title = `${prov.id} · ${prov.clients} client${prov.clients === 1 ? '' : 's'} in the last 4 weeks · ${prov.avg4.toFixed(1)} hrs/wk avg on weeks worked`;
+                nc.style.cssText = 'font-weight:600;color:var(--text);text-align:left;padding-left:0.5rem;white-space:nowrap;font-size:0.82rem';
+                row.appendChild(nc);
+                const tc = document.createElement('td');
+                tc.style.cssText = "font-family:'JetBrains Mono',monospace;font-size:0.78rem;font-weight:600;text-align:center;color:#a371f7;white-space:nowrap";
+                tc.textContent = target.toFixed(0);
+                tc.title = `${target} hrs/wk target`;
+                row.appendChild(tc);
+                weeks.forEach(week => {
+                    const cell = document.createElement('td');
+                    const hrs  = prov.weeks[week] || 0;
+                    const { bg, color, pct } = providerHeatColor(hrs, target);
+                    cell.style.cssText = `background:${bg};color:${color};border-radius:5px;text-align:center;font-size:0.75rem;font-weight:600;padding:0.45rem 0.35rem;transition:transform 0.15s`;
+                    cell.textContent = hrs > 0 ? hrs.toFixed(1) : '';
+                    const pctLabel = hrs > 0 ? ` (${(pct * 100).toFixed(0)}% of target)` : '';
+                    cell.title = `${prov.id} · ${week}: ${hrs.toFixed(1)} hrs${pctLabel}`;
+                    cell.addEventListener('mouseenter', () => cell.style.transform = 'scale(1.1)');
+                    cell.addEventListener('mouseleave', () => cell.style.transform = '');
+                    if (last4Weeks.includes(week) && hrs > 0) {
+                        cell.style.outline = '1px solid rgba(5,191,219,0.25)';
+                        cell.style.outlineOffset = '-1px';
+                    }
+                    row.appendChild(cell);
+                });
+                const tot = document.createElement('td');
+                tot.textContent = prov.total.toFixed(1);
+                tot.style.cssText = "color:var(--accent);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.82rem;text-align:center";
+                row.appendChild(tot);
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            // Legend — % of weekly target
+            const swatches = [0, 0.25, 0.5, 0.75, 0.9, 1.0, 1.15].map(p => {
+                const { bg } = providerHeatColor(p * PROVIDER_97153_TARGET, PROVIDER_97153_TARGET);
+                const label  = p === 0 ? '0%' : `${Math.round(p * 100)}%`;
+                return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                            <div class="legend-box" style="background:${bg}"></div>
+                            <span style="font-size:0.6rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace">${label}</span>
+                        </div>`;
+            }).join('');
+            document.getElementById('clientHeatmapLegend').innerHTML = `
+                <span style="font-size:0.72rem;color:var(--text-dim)">% of ${PROVIDER_97153_TARGET} hr/wk target →</span>
+                ${swatches}
+                <span style="font-size:0.72rem;color:var(--text-dim);margin-left:0.5rem">Busiest week: ${maxHrs.toFixed(1)} hrs</span>`;
+        }
+        /* ── HEATMAP MODE SWITCH ────────────────────────────────── */
+        function renderHeatmapSection() {
+            const title = document.getElementById('heatmapSectionTitle');
+            if (heatmapMode === 'provider') {
+                title.textContent = 'Provider Billed Hours (97153) · Last 12 Weeks';
+                renderProviderHeatmap();
+            } else {
+                title.textContent = 'Client Hours Heatmap (97153) · Last 12 Weeks';
+                renderClientHeatmap();
+            }
+            document.querySelectorAll('#heatmapModeToggle .seg-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.mode === heatmapMode);
+            });
         }
         /* ── AI INSIGHTS ENGINE ─────────────────────────────────── */
         function generateInsights() {
@@ -2469,7 +2684,7 @@
             renderAssessmentBanner();
             renderQuarterProgress();
             renderTeamTrendChart();
-            renderClientHeatmap();
+            renderHeatmapSection();
             renderAIInsights();
             renderWeeklyActions();
         }
@@ -2952,6 +3167,12 @@
         document.getElementById('backBtn').addEventListener('click', showSelectionScreen);
         document.getElementById('allBackBtn').addEventListener('click', showSelectionScreen);
         document.getElementById('psychBackBtn').addEventListener('click', showSelectionScreen);
+        document.getElementById('heatmapModeToggle').addEventListener('click', e => {
+            const btn = e.target.closest('.seg-btn');
+            if (!btn || btn.dataset.mode === heatmapMode) return;
+            heatmapMode = btn.dataset.mode;
+            renderHeatmapSection();
+        });
         /* ── INIT ──────────────────────────────────────────────── */
         async function init() {
             try {
