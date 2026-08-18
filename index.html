@@ -1232,13 +1232,52 @@
             { name: 'Katy Sampson',           target: 2 },
         ];
         const PSYCH_CODE = '96136';
-        // Weekly 97153 direct-hours target used to colour the provider heatmap.
-        // 32 hrs/wk = full-time expectation. Add a name here to override per person.
-        const PROVIDER_97153_TARGET = 32;
-        const PROVIDER_TARGET_OVERRIDES = {
-            // 'Jane Doe': 20,
+        /* ── 97153 PROVIDER ROSTER ─────────────────────────────────
+           Drives the Providers view of the 97153 heatmap.
+           'FT' → measured against PROVIDER_FT_TARGET (32 hrs/wk).
+           'PT' → no target; shaded by volume and marked with an asterisk.
+           Anyone billing 97153 who is not listed here lands in an
+           "Unclassified" group at the bottom, so new hires surface instead
+           of silently disappearing. Move them up as FT/PT when you see them.
+        */
+        const PROVIDER_FT_TARGET = 32;
+        const PROVIDER_ROSTER = {
+            // ── Full time · 32 hrs/wk ──
+            'Danielle Thompson':        'FT',
+            'Dominick Feaster':         'FT',
+            'Skyla Saari':              'FT',
+            'Hannah Hilkey':            'FT',
+            'Skylar Hofmann':           'FT',
+            'Laura Hernandez':          'FT',
+            'Christoper Orange-Ocasio': 'FT', // spelling as it appears in CentralReach
+            'Nicole Alessie':           'FT',
+            'Kyleigh Morris':           'FT',
+            'Sulayman Trawalley':       'FT',
+            'Sarah Wood':               'FT',
+            'Jessica Daugherty':        'FT',
+            'Bianca Cramer':            'FT',
+            'Cameryn Gonzalez-Gibbs':   'FT',
+            'Kelsy Saari':              'FT',
+            'Robyn Howard':             'FT',
+            'Logan Pratt-Koyak':        'FT',
+            // ── Part time · no hours target ──
+            'Jasmine Juneau':           'PT',
+            'Lexie Martin':             'PT', // clinical intern
+            'Esmeralda Leon':           'PT', // marketing
+            'Joanne Hawkins':           'PT',
+            'Theresa Thurman':          'PT',
         };
-        const providerTarget = name => PROVIDER_TARGET_OVERRIDES[name] || PROVIDER_97153_TARGET;
+        // Hidden from the 97153 provider heatmap entirely.
+        const PROVIDER_97153_HIDDEN = [
+            'Briana Ashe', 'Ashley Myers', 'Alexis Fox', 'Aylen Gomez',         // no longer with ATA
+            'Mikayla Penney', 'Maxwell Guerra', 'Ann Del Rosario',
+            'Cindy Martinez', 'Elijah Richardson',                              // BCBAs
+        ];
+        const normName = n => (n || '').trim().replace(/\s+/g, ' ').toLowerCase();
+        const ROSTER_LOOKUP = {};
+        Object.entries(PROVIDER_ROSTER).forEach(([n, t]) => { ROSTER_LOOKUP[normName(n)] = t; });
+        const HIDDEN_LOOKUP = new Set(PROVIDER_97153_HIDDEN.map(normName));
+        const providerStatus = name => ROSTER_LOOKUP[normName(name)] || 'NEW';
         /* ── STATE ─────────────────────────────────────────────── */
         let allData      = [];
         let passwordMap  = {};
@@ -1609,13 +1648,14 @@
                 const week = getWeekNumber(r.DateOfService);
                 if (!recentWeeks.includes(week)) return;
                 const name = `${(r.ProviderFirstName || '').trim()} ${(r.ProviderLastName || '').trim()}`.trim();
-                if (!name) return;
+                if (!name || HIDDEN_LOOKUP.has(normName(name))) return;
                 const hrs = parseFloat(r.TimeWorkedInHours) || 0;
                 if (!providerMap[name]) providerMap[name] = { weeks: {}, clients: {} };
                 providerMap[name].weeks[week] = (providerMap[name].weeks[week] || 0) + hrs;
                 const cid = r.ClientId || 'Unknown';
                 if (last4Weeks.includes(week)) providerMap[name].clients[cid] = true;
             });
+            const ORDER = { FT: 0, PT: 1, NEW: 2 };
             const providers = Object.entries(providerMap)
                 .map(([id, d]) => {
                     const weeks  = d.weeks;
@@ -1623,22 +1663,24 @@
                     const active = last4Weeks.filter(w => weeks[w] > 0);
                     return {
                         id, weeks, total,
+                        status:  providerStatus(id),
                         clients: Object.keys(d.clients).length,
                         avg4:    active.length
                                  ? last4Weeks.reduce((s, w) => s + (weeks[w] || 0), 0) / active.length
                                  : 0,
                     };
                 })
-                .sort((a, b) => b.total - a.total);
+                // FT block first, then PT, then anyone off-roster; hours desc within each
+                .sort((a, b) => (ORDER[a.status] - ORDER[b.status]) || (b.total - a.total));
             const maxHrs = Math.max(...providers.flatMap(p => Object.values(p.weeks)), 1);
             return { providers, weeks: recentWeeks, maxHrs };
         }
-        // Provider shading: % of the weekly 97153 target (32 hrs full-time).
+        // Full-time shading: % of the weekly 97153 target (32 hrs).
         // Same red → amber → green ramp as clients, but going OVER target is
         // a good thing for a provider, so it stays green rather than flagging.
         function providerHeatColor(hours, target) {
             if (!hours || hours === 0) return { bg: 'rgba(22,27,34,0.9)', color: '#3a4555', pct: 0 };
-            const t   = target > 0 ? target : PROVIDER_97153_TARGET;
+            const t   = target > 0 ? target : PROVIDER_FT_TARGET;
             const pct = hours / t;
             let r, g, b = 40, alpha;
             if (pct <= 0.5) {
@@ -1653,6 +1695,19 @@
                 r = 45; g = 190; alpha = 0.95;
             }
             return { bg: `rgba(${r},${g},${b},${alpha})`, color: '#e6edf3', pct };
+        }
+        // Part-time / off-roster shading: no target to measure against, so use a
+        // neutral single-hue volume ramp. Deliberately NOT red→green — nobody
+        // should look like they're failing a target they don't have.
+        function volumeHeatColor(hours, max) {
+            if (!hours || hours === 0) return { bg: 'rgba(22,27,34,0.9)', color: '#3a4555', pct: 0 };
+            const pct   = Math.min(hours / (max > 0 ? max : 1), 1);
+            const alpha = 0.18 + pct * 0.72;
+            return {
+                bg:    `rgba(5,191,219,${alpha})`,
+                color: pct > 0.45 ? '#04141a' : '#c9d6de',
+                pct,
+            };
         }
         function buildClientWoW() {
             if (last4Weeks.length < 2) return [];
@@ -1943,7 +1998,7 @@
             hRow.appendChild(thN);
             const thT = document.createElement('th');
             thT.textContent = 'Target/wk';
-            thT.title = `Weekly 97153 target (${PROVIDER_97153_TARGET} hrs full-time)`;
+            thT.title = `Weekly 97153 target — ${PROVIDER_FT_TARGET} hrs for full-time staff; part-time have none`;
             thT.style.cssText = 'color:#a371f7;white-space:nowrap;cursor:help';
             hRow.appendChild(thT);
             weeks.forEach(week => {
@@ -1962,27 +2017,47 @@
             thead.appendChild(hRow);
             table.appendChild(thead);
             // Body
-            const tbody = document.createElement('tbody');
+            const tbody   = document.createElement('tbody');
+            const colSpan = weeks.length + 3;
+            const GROUPS  = {
+                FT:  `Full Time · ${PROVIDER_FT_TARGET} hrs/wk target`,
+                PT:  'Part Time · no hours target',
+                NEW: 'Unclassified · not on the roster yet',
+            };
+            let lastStatus = null;
             providers.forEach(prov => {
-                const row    = document.createElement('tr');
-                const target = providerTarget(prov.id);
+                // Group divider whenever the FT/PT/unclassified block changes
+                if (prov.status !== lastStatus) {
+                    lastStatus = prov.status;
+                    const gr = document.createElement('tr');
+                    const gc = document.createElement('td');
+                    gc.colSpan = colSpan;
+                    gc.textContent = GROUPS[prov.status];
+                    gc.style.cssText = "font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-dim);text-align:left;padding:0.9rem 0.5rem 0.35rem;border-bottom:1px solid var(--border)";
+                    gr.appendChild(gc);
+                    tbody.appendChild(gr);
+                }
+                const isFT = prov.status === 'FT';
+                const row  = document.createElement('tr');
                 const nc = document.createElement('td');
-                nc.textContent = prov.id;
-                nc.title = `${prov.id} · ${prov.clients} client${prov.clients === 1 ? '' : 's'} in the last 4 weeks · ${prov.avg4.toFixed(1)} hrs/wk avg on weeks worked`;
-                nc.style.cssText = 'font-weight:600;color:var(--text);text-align:left;padding-left:0.5rem;white-space:nowrap;font-size:0.82rem';
+                nc.textContent = isFT ? prov.id : `${prov.id} *`;
+                nc.title = `${prov.id}${isFT ? '' : prov.status === 'PT' ? ' · part time' : ' · not on the roster — add to PROVIDER_ROSTER'} · ${prov.clients} client${prov.clients === 1 ? '' : 's'} in the last 4 weeks · ${prov.avg4.toFixed(1)} hrs/wk avg on weeks worked`;
+                nc.style.cssText = `font-weight:600;color:${isFT ? 'var(--text)' : 'var(--text-dim)'};text-align:left;padding-left:0.5rem;white-space:nowrap;font-size:0.82rem`;
                 row.appendChild(nc);
                 const tc = document.createElement('td');
                 tc.style.cssText = "font-family:'JetBrains Mono',monospace;font-size:0.78rem;font-weight:600;text-align:center;color:#a371f7;white-space:nowrap";
-                tc.textContent = target.toFixed(0);
-                tc.title = `${target} hrs/wk target`;
+                tc.textContent = isFT ? String(PROVIDER_FT_TARGET) : '—';
+                tc.title       = isFT ? `${PROVIDER_FT_TARGET} hrs/wk target` : 'No hours target';
                 row.appendChild(tc);
                 weeks.forEach(week => {
                     const cell = document.createElement('td');
                     const hrs  = prov.weeks[week] || 0;
-                    const { bg, color, pct } = providerHeatColor(hrs, target);
+                    const { bg, color, pct } = isFT
+                        ? providerHeatColor(hrs, PROVIDER_FT_TARGET)
+                        : volumeHeatColor(hrs, maxHrs);
                     cell.style.cssText = `background:${bg};color:${color};border-radius:5px;text-align:center;font-size:0.75rem;font-weight:600;padding:0.45rem 0.35rem;transition:transform 0.15s`;
                     cell.textContent = hrs > 0 ? hrs.toFixed(1) : '';
-                    const pctLabel = hrs > 0 ? ` (${(pct * 100).toFixed(0)}% of target)` : '';
+                    const pctLabel = hrs > 0 && isFT ? ` (${(pct * 100).toFixed(0)}% of target)` : '';
                     cell.title = `${prov.id} · ${week}: ${hrs.toFixed(1)} hrs${pctLabel}`;
                     cell.addEventListener('mouseenter', () => cell.style.transform = 'scale(1.1)');
                     cell.addEventListener('mouseleave', () => cell.style.transform = '');
@@ -1999,19 +2074,28 @@
                 tbody.appendChild(row);
             });
             table.appendChild(tbody);
-            // Legend — % of weekly target
-            const swatches = [0, 0.25, 0.5, 0.75, 0.9, 1.0, 1.15].map(p => {
-                const { bg } = providerHeatColor(p * PROVIDER_97153_TARGET, PROVIDER_97153_TARGET);
-                const label  = p === 0 ? '0%' : `${Math.round(p * 100)}%`;
-                return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-                            <div class="legend-box" style="background:${bg}"></div>
-                            <span style="font-size:0.6rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace">${label}</span>
-                        </div>`;
-            }).join('');
+            // Legend — one scale for FT (% of target), one for PT (raw volume)
+            const swatch = (bg, label) =>
+                `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                     <div class="legend-box" style="background:${bg}"></div>
+                     <span style="font-size:0.6rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace">${label}</span>
+                 </div>`;
+            const ftSwatches = [0, 0.25, 0.5, 0.75, 0.9, 1.0, 1.15].map(p =>
+                swatch(providerHeatColor(p * PROVIDER_FT_TARGET, PROVIDER_FT_TARGET).bg,
+                       p === 0 ? '0%' : `${Math.round(p * 100)}%`)
+            ).join('');
+            const ptSwatches = [0, 0.25, 0.5, 0.75, 1.0].map(p =>
+                swatch(volumeHeatColor(p * maxHrs, maxHrs).bg,
+                       p === 0 ? '0h' : `${(p * maxHrs).toFixed(0)}h`)
+            ).join('');
+            const hasNonFT = providers.some(p => p.status !== 'FT');
             document.getElementById('clientHeatmapLegend').innerHTML = `
-                <span style="font-size:0.72rem;color:var(--text-dim)">% of ${PROVIDER_97153_TARGET} hr/wk target →</span>
-                ${swatches}
-                <span style="font-size:0.72rem;color:var(--text-dim);margin-left:0.5rem">Busiest week: ${maxHrs.toFixed(1)} hrs</span>`;
+                <span style="font-size:0.72rem;color:var(--text-dim)">Full time · % of ${PROVIDER_FT_TARGET} hr target →</span>
+                ${ftSwatches}
+                ${hasNonFT ? `
+                    <span style="width:1px;height:24px;background:var(--border);margin:0 0.65rem"></span>
+                    <span style="font-size:0.72rem;color:var(--text-dim)">Part time (*) · hours →</span>
+                    ${ptSwatches}` : ''}`;
         }
         /* ── HEATMAP MODE SWITCH ────────────────────────────────── */
         function renderHeatmapSection() {
